@@ -32,4 +32,6 @@
 *.dSYM/
 
 # project specific
-./bin
+bin/*
+.*~
+.swp
