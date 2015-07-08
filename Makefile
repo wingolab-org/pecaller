@@ -39,14 +39,10 @@ introduce:
 	@echo "building: dump_pileup pecaller pemapper pemapper_tsw"
 
 clean:
-	rm -f *.o
-
-distclean:
-	rm -f *.o
 	rm $(PROGS)
 
 install: $(PROGS)
-	cp $(PROGS) /usr/bin/
+	cp $(PROGS) ${LOC_SYS}/bin/
 
 ## end of Makefile
 # DO NOT DELETE THIS LINE -- make depend depends on it.
