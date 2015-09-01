@@ -1,6 +1,6 @@
 # pecaller
 
-This is software to map and call next generation genomic sequnecing by David J. Cutler, Ph.D. and colleagues.
+This software maps and calls next generation genomic sequencing. It is written by David J. Cutler, Ph.D.
 
 ## Build genome index
 
