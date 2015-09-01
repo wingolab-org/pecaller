@@ -42,6 +42,7 @@ bin/*
 Session.vim
 .netrwhist
 *~
+*.bak
 
 # emacs
 # -*- mode: gitignore; -*-
