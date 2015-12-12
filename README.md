@@ -2,6 +2,11 @@
 
 This software maps and calls next generation genomic sequencing. It was written by David J. Cutler, Ph.D.
 
+## Folding in Dave's code
+
+1. Change EOL characters to unix `set ff=unix` in vim.
+2. indent things in a consistent way: `indent -bli0 -l120`.
+
 ## Build genome index
 
 * Download the genome fa files. 
