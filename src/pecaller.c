@@ -213,7 +213,7 @@ void *call_single_base (void *threadid);
 
 int max_gen, min_depth_needed;
 int ALL_FINISHED = FALSE;
-//int dump_me = FALSE;
+int dump_me = FALSE;
 
 double EPS = 1e-8;
 #define MAX_DIST 501
@@ -1192,7 +1192,7 @@ call_single_base (void *threadid)
 
   ln_HW = HW_exact;
   // long iii = 0;
-  int dump_me = FALSE;
+  dump_me = FALSE;
   unsigned long dummy_counter = 0;
 
   while (!ALL_FINISHED)
@@ -1206,7 +1206,7 @@ call_single_base (void *threadid)
       char dom = td->dom;
       int expos = td->pos;
       int bad_base = FALSE;
-      /* if(expos == 64078)
+      /* if(expos == 157284496)
          dump_me = TRUE;
          else
          bad_base = TRUE; */
@@ -2233,14 +2233,14 @@ clean_config_probs (CNODE ** cn, SAMNODE ** sn, int n, int max, int max_gen, int
   int i;
 
   qsort (cn, n, sizeof (CNODE *), sort_configs);
-  /* if(dump_me)
-     for(i=0;i<n;i++)
-     {
-     printf("\n For configuration %d like = %g  prior = %g  post = %g",i,cn[i]->like,cn[i]->prior,cn[i]->post);
-     int j;
-     for(j=0;j<max_gen;j++)
-     printf(" %d",cn[i]->genotype_count[j]); 
-     }  */
+  if (dump_me)
+    for (i = 0; i < n; i++)
+    {
+      printf ("\n For configuration %d like = %g  prior = %g  post = %g", i, cn[i]->like, cn[i]->prior, cn[i]->post);
+      int j;
+      for (j = 0; j < max_gen; j++)
+	printf (" %d", cn[i]->genotype_count[j]);
+    }
   max = minim (max, n);
   for (i = 1; i < max; i++)
     if (cn[0]->post > cn[i]->post + ct)
@@ -2290,12 +2290,12 @@ clean_config_probs (CNODE ** cn, SAMNODE ** sn, int n, int max, int max_gen, int
 
       cn[max] = config_alloc (indiv, best_hom, sn, HAPLOID);
 
-      //if(dump_me)
-      //         printf("\n About to file hom_like with best_hom = %d and ref = %d\n\n",best_hom,ref);
+      if (dump_me)
+	printf ("\n About to file hom_like with best_hom = %d and ref = %d\n\n", best_hom, ref);
       cn[max]->prior = 0.0;
       fill_config_like (cn[max], sn, indiv);
-      //if(dump_me)
-      //       printf("\n Done with like = %g \n\n",cn[max]->like);
+      if (dump_me)
+	printf ("\n Done with like = %g \n\n", cn[max]->like);
       cn[max]->post = cn[max]->like;
       if (cn[max]->post > cn[max - 1]->post)
 	qsort (cn, max + 1, sizeof (CNODE *), sort_configs);
@@ -2504,14 +2504,15 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
   new = (CNODE **) malloc ((unsigned) ((max + 1) * (n + 1) * sizeof (CNODE *)));
   if (!new)
     dump_error ("Allocation failure in fill_config_probs\n");
-  // if(dump_me)
-  /* for(i=0;i<n;i++)
-     {
-     printf("\nIn fill_config_probs For configuration %d like = %g  prior = %g  post = %g",i,cn[i]->like,cn[i]->prior,cn[i]->post);
-     int j;
-     for(j=0;j<max_gen;j++)
-     printf(" %d",cn[i]->genotype_count[j]); 
-     }  */
+  if (dump_me)
+    for (i = 0; i < n; i++)
+    {
+      printf ("\nIn fill_config_probs For configuration %d like = %g  prior = %g  post = %g", i, cn[i]->like,
+	      cn[i]->prior, cn[i]->post);
+      int j;
+      for (j = 0; j < max_gen; j++)
+	printf (" %d", cn[i]->genotype_count[j]);
+    }
   // max = minim(max,n);
   // printf("\n Entering fill_config_probs with n = %d depth = %d\n\n",n,this_depth);
   for (i = 0; i < n; i++)
@@ -2543,8 +2544,8 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
       old = cn[i];
       j = (int) old->sample_calls[this_depth];
 
-      // if(dump_me)
-      // printf("\n Last call was a %d \n",j);
+      if (dump_me)
+	printf ("\n Last call was a %d \n", j);
       if (j < MAX_GENOTYPES)
       {
 	// if(dump_me)
@@ -2597,8 +2598,13 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	//    printf("\n Allele %d has count %d",k,old->allele_count[k]);
 	// }
 	double templ = old->like + sn->like[j];
-	// if(dump_me)
-	//     printf("\n Just calculated genotype %d with a likelihood of %g jj = %d max = %d\n",j,templ,jj,max);
+	// insertion / deletion weirdness.
+	if ((j == 12) && (sn->reads[4] < 3))
+	  templ -= 1e10;
+	if ((j == 13) && (sn->reads[5] < 3))
+	  templ -= 1e10;
+	if (dump_me)
+	  printf ("\n Just calculated genotype %d with a likelihood of %g jj = %d max = %d\n", j, templ, jj, max);
 	if ((templ + thres > best_post) || (templ + 0.01 > best_like))
 	{
 	  temp = config_alloc (indiv, ref, samples, HAPLOID);
@@ -2618,11 +2624,12 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	  for (k = 0; k < NO_ALLELES; k++)
 	    temp->allele_count[k] = old->allele_count[k];
 	  temp->no_denovo = old->no_denovo;
-	  /* if(dump_me)
-	     {
-	     printf("\nOn Individual %s and call %d",sn->indiv,j);
-	     printf("\n\tBefore the number of denovo is %d hets = %d  homs = %d",temp->no_denovo,temp->hets,temp->homs);
-	     } */
+	  if (dump_me)
+	  {
+	    printf ("\nOn Individual %s and call %d", sn->indiv, j);
+	    printf ("\n\tBefore the number of denovo is %d hets = %d  homs = %d", temp->no_denovo, temp->hets,
+		    temp->homs);
+	  }
 	  if (j >= NO_ALLELES)
 	    temp->hets++;
 	  else
@@ -2710,15 +2717,15 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	  temp->post = temp->prior + temp->like;
 	  best_like = maxim (temp->like, best_like);
 	  best_post = maxim (temp->post, best_post);
-	  /*if(dump_me)
-	     {
-	     printf("\nSample data is");
-	     for(ii=0;ii<NO_ALLELES;ii++)
-	     printf(" %d",sn->reads[ii]);  
-	     printf("\nWith HW Prior is %g",temp->prior); 
-	     printf("\n\tTotal Like = %g  This Prob = %g  Total Post = %g",temp->like,sn->like[j],temp->post);
-	     printf("\n call = %d  max = %d \n",j,max);
-	     } */
+	  if (dump_me)
+	  {
+	    printf ("\nSample data is");
+	    for (ii = 0; ii < NO_ALLELES; ii++)
+	      printf (" %d", sn->reads[ii]);
+	    printf ("\nWith HW Prior is %g", temp->prior);
+	    printf ("\n\tTotal Like = %g  This Prob = %g  Total Post = %g", temp->like, sn->like[j], temp->post);
+	    printf ("\n call = %d  max = %d \n", j, max);
+	  }
 	  if (temp->post + thres > best_post)
 	  {
 	    // printf("\n About to store \n\n"); 
