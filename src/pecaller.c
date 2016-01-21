@@ -93,7 +93,7 @@ typedef struct config_node
 
 short dyad_denovo[MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
 short trio_denovo[MAX_GENOTYPES + 1][MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
-short allele_counts[4][MAX_GENOTYPES][NO_ALLELES];
+short allele_counts[NO_ALLELES][MAX_GENOTYPES][NO_ALLELES];
 
 double LOW_BASE;
 
@@ -1213,6 +1213,10 @@ call_single_base (void *threadid)
       int chrom = td->chrom;
       SAMNODE **samples = td->samples;
       int HAPLOID = td->HAPLOID;
+      if (samples[0]->reads[5] > 10)
+	dump_me = TRUE;
+      else
+	dump_me = FALSE;
 
       for (ind = 0; ind < INDIV; ind++)
       {
@@ -1450,7 +1454,8 @@ call_single_base (void *threadid)
 	    samples[ind]->final_call = besti;
 	    if (samples[ind]->final_call != samples[ind]->initial_call || samples[ind]->final_p < THRESHOLD)
 	      calls_changed = TRUE;
-	    // printf("\nind = %d Making call  %c at p = %g",ind,int_to_gen(besti),samples[ind]->post_prob[besti]); 
+	    if (dump_me)
+	      printf ("\nind = %d Making call  %c at p = %g", ind, int_to_gen (besti), samples[ind]->post_prob[besti]);
 	  }
 
 	if (INDIV < 4 || pass == last_pass)
@@ -1555,7 +1560,7 @@ call_single_base (void *threadid)
       int this_allele_count[NO_ALLELES];
       for (i = 0; i < NO_ALLELES; i++)
 	this_allele_count[i] = 0;
-      LOW_BASE = maxim (15, 0.4 * average_depth);
+      LOW_BASE = maxim (8, 0.4 * average_depth);
       int on_target = 0;
       int off_target = 0;
       for (ind = 0; ind < INDIV; ind++)
@@ -1572,7 +1577,10 @@ call_single_base (void *threadid)
 		on_target += samples[ind]->reads[i];
 	      }
 	      else
-		off_target += samples[ind]->reads[i];
+	      {
+		if ((i != dom_int) || (samples[ind]->final_call != (NO_ALLELES - 1)))
+		  off_target += samples[ind]->reads[i];
+	      }
 	    if ((samples[ind]->tot > LOW_BASE) && (samples[ind]->final_call != dom_int))
 	      not_low++;
 	  }
@@ -1601,7 +1609,7 @@ call_single_base (void *threadid)
 	  else if (i != dom_int)
 	    issnp = SNP;
 	}
-      if (this_no_alleles > 1)
+      if (this_no_alleles > 1 || ((this_no_alleles > 0) && (this_allele_count[dom_int] < 1)))
       {
 	if ((double) off_target / (double) (on_target + off_target) > 0.15)
 	  issnp = MESS;
@@ -2106,7 +2114,7 @@ check_alpha_sanity (int **alpha_prior, int max_gen, int **first_alpha_prior, int
   i = 5;
   temp = frac[i][i] - frac[ref][i];
 
-  if (temp < 0.7)
+  if (temp < -0.1)
     for (j = 0; j < NO_ALLELES; j++)
       alpha_prior[i][j] = first_alpha_prior[i][j];
 
