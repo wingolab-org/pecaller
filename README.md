@@ -23,7 +23,7 @@ Use the Perl script `merge_dir_fa.pl` to merge the files. The intention of the s
 
 * Index the merged fa file.
 
-Use `index_genome` either interactively to index the merged fa file. You can redirect the expected input from a file. For example, `index_genome < in.cmds` where `in.cmds` is a file with the following information:
+Use `index_genome` either interactively or you can redirect input from a file. For example, `index_genome < in.cmds` where `in.cmds` contains:
 
     d
     1000
