@@ -1,6 +1,6 @@
 /* 
 
-The code itself is Copyright (C) 2014, by David J. Cutler.
+The code itself is Copyright (C) 2016, by David J. Cutler.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
