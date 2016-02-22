@@ -119,6 +119,7 @@ static inline void init_bonus_matrices (double match_bonus, double **forward_bon
 					double **reverse_bonus_matrix, double **gap_open, double **gap_extend, int ms);
 long init_gzfile_buffer (char *buf, long *buf_end, gzFile file);
 static inline char *my_gzgets (gzFile file, char *buf, long *buf_end, long *buf_current);
+void dump_output (char **mate_names, char **contig_names, long tot_pairs);
 
 static int MAX_THREADS;
 static FILE *outfile;
@@ -139,6 +140,8 @@ static int max_contigs, no_contigs;
 static BASE_NODE *all_base_list;
 static PTHREAD_DATA_NODE **all_thread_data;
 static int reads_per_thread = 20000;
+static gzFile indelfile, pileupfile;
+static FILE *summaryfile;
 
 #define MAX_FILE_BUFFER 1200000000
 
@@ -177,16 +180,16 @@ main (int argc, char *argv[])
   char *file1_buf, *file2_buf;
   char **file1_names;
   char **file2_names;
+  char **out_names;
 
   FILE *sfile;
   gzFile reffile, ifile;
   FILE *mfile1, *mfile2;
   FILE *mmfile;
   FILE *afile1, *afile2;
-  FILE *summaryfile;
-  gzFile indelfile, pileupfile;
 
-  char mate_names[NEITHER_MAP + 1][80];
+  char **mate_names;
+  mate_names = cmatrix (0, NEITHER_MAP, 0, 80);
 
   gzFile innfile1, innfile2;
   sss1 = sss2 = NULL;
@@ -204,9 +207,12 @@ main (int argc, char *argv[])
   file2_buf = NULL;
   buffer1_current = buffer2_current = 0;
   buffer1_end = buffer2_end = 0;
+  int fastq_read_offset = 0;
+  out_names = cmatrix (0, 2000, 0, 512);
+  for (i = 0; i <= 2000; i++)
+    out_names[i][0] = '\0';
 
   max_reads = 30000;
-  int fastq_read_offset = 0;
   if (c_end != 'P' && c_end != 'S')
   {
     printf
@@ -231,22 +237,28 @@ main (int argc, char *argv[])
     maps1 = malloc (sizeof (unsigned int) * max_reads);
     if (c_array == 'A')
     {
-      file1_names = cmatrix (0, 2000, 0, 512);
+      file1_names = cmatrix (0, 2000, 0, 1024);
       if ((afile1 = fopen (argv[4], "r")) == (FILE *) NULL)
       {
 	printf ("\n Can not open file %s for reading\n", argv[4]);
 	exit (1);
       }
       i = 0;
-      fgets (file1_names[i], 511, afile1);
+      char *t2;
+      fgets (file1_names[i], 1023, afile1);
       token = strtok (file1_names[i], "\t \n");
+      t2 = strtok (NULL, "\t \n");
+      if (t2)
+	strcpy (out_names[i], t2);
       while ((i < 2000) && (strlen (file1_names[i]) > 2) && (!feof (afile1)))
       {
 	i++;
 	file1_names[i][0] = '\0';
 	fgets (file1_names[i], 511, afile1);
 	token = strtok (file1_names[i], "\t \n");
-
+	t2 = strtok (NULL, "\t \n");
+	if (t2)
+	  strcpy (out_names[i], t2);
       }
       file_num = i;
       fclose (afile1);
@@ -294,6 +306,7 @@ main (int argc, char *argv[])
     {
       file1_names = cmatrix (0, 2000, 0, 512);
       file2_names = cmatrix (0, 2000, 0, 512);
+      char *t2;
       if ((afile1 = fopen (argv[4], "r")) == (FILE *) NULL)
       {
 	printf ("\n Can not open file %s for reading\n", argv[4]);
@@ -305,15 +318,22 @@ main (int argc, char *argv[])
 	exit (1);
       }
       i = 0;
-      fgets (file1_names[i], 511, afile1);
+      fgets (file1_names[i], 1024, afile1);
       token = strtok (file1_names[i], "\t \n");
+      t2 = strtok (NULL, "\t \n");
+      if (t2)
+	strcpy (out_names[i], t2);
+      // printf("\n for line %d t2 = %s \n",i,t2);
       while ((i < 2000) && (strlen (file1_names[i]) > 2) && (!feof (afile1)))
       {
 	i++;
 	file1_names[i][0] = '\0';
 	fgets (file1_names[i], 511, afile1);
 	token = strtok (file1_names[i], "\t \n");
-
+	t2 = strtok (NULL, "\t \n");
+	if (t2)
+	  strcpy (out_names[i], t2);
+	// printf("\n for line %d t2 = %s \n",i,t2);
       }
       file_num = i;
       fclose (afile1);
@@ -357,24 +377,6 @@ main (int argc, char *argv[])
   strcpy (basename, argv[1]);
   outfile = stdout;
 
-  sprintf (sss, "%s.pileup.gz", basename);
-  if ((pileupfile = gzopen (sss, "wb")) == (gzFile) NULL)
-  {
-    printf ("\n Can not open file %s for writing\n", sss);
-    exit (1);
-  }
-  sprintf (sss, "%s.indel.txt.gz", basename);
-  if ((indelfile = gzopen (sss, "w")) == (gzFile) NULL)
-  {
-    printf ("\n Can not open file %s for writing\n", sss);
-    exit (1);
-  }
-  sprintf (sss, "%s.summary.txt", basename);
-  if ((summaryfile = fopen (sss, "w")) == (FILE *) NULL)
-  {
-    printf ("\n Can not open file %s for writing\n", sss);
-    exit (1);
-  }
   strcpy (sdxname, argv[2]);
   if ((sfile = fopen (sdxname, "r")) == (FILE *) NULL)
   {
@@ -587,13 +589,14 @@ main (int argc, char *argv[])
 
 
 
-  total_bases = total_reads = total_dist = no_dists = 0;
   printf ("\n About to start mapping everything \n\n");
   int no_thread = -1;
   int this_read = 0;
 
   int iter;
-  long tot_pairs = 0;
+  long tot_pairs;
+  tot_pairs = total_bases = total_reads = total_dist = no_dists = 0;
+  int open_flag = TRUE;
 
   for (iter = 0; iter < file_num; iter++)
   {
@@ -610,6 +613,46 @@ main (int argc, char *argv[])
       printf ("\n Can not open file %s\n", sss);
       exit (1);
     }
+    if (out_names[iter][0] != '\0')
+    {
+      if ((strcmp (basename, out_names[iter]) != 0))
+      {
+	open_flag = TRUE;
+	if (iter > 0)
+	{
+	  dump_output (mate_names, contig_names, tot_pairs);
+	  tot_pairs = 0;
+	}
+      }
+      else if (iter > 0)
+	open_flag = FALSE;
+    }
+
+    if (open_flag)
+    {
+      open_flag = FALSE;
+      if (out_names[iter][0] != '\0')
+	strcpy (basename, out_names[iter]);
+      sprintf (sss, "%s.pileup.gz", basename);
+      if ((pileupfile = gzopen (sss, "wb")) == (gzFile) NULL)
+      {
+	printf ("\n Can not open file %s for writing\n", sss);
+	exit (1);
+      }
+      sprintf (sss, "%s.indel.txt.gz", basename);
+      if ((indelfile = gzopen (sss, "w")) == (gzFile) NULL)
+      {
+	printf ("\n Can not open file %s for writing\n", sss);
+	exit (1);
+      }
+      sprintf (sss, "%s.summary.txt", basename);
+      if ((summaryfile = fopen (sss, "w")) == (FILE *) NULL)
+      {
+	printf ("\n Can not open file %s for writing\n", sss);
+	exit (1);
+      }
+    }
+
     int seq_len2 = 0;
     if (pair_flag)
     {
@@ -627,6 +670,7 @@ main (int argc, char *argv[])
       }
       sss2 = my_gzgets (innfile2, file2_buf, &buffer2_end, &buffer2_current);
       sss2 = my_gzgets (innfile2, file2_buf, &buffer2_end, &buffer2_current);
+      sss2 += fastq_read_offset;
       seq_len2 = strlen (sss2);
     }
     sss1 = my_gzgets (innfile1, file1_buf, &buffer1_end, &buffer1_current);
@@ -769,6 +813,15 @@ main (int argc, char *argv[])
 
   }				// End For loop
 
+  dump_output (mate_names, contig_names, tot_pairs);
+  pthread_exit (NULL);
+}
+
+void
+dump_output (char **mate_names, char **contig_names, long tot_pairs)
+{
+  int i, j;
+  unsigned int pos;
   long no_bases = total_bases;
 
   if (no_bases <= 0)
@@ -788,7 +841,7 @@ main (int argc, char *argv[])
     fprintf (summaryfile, "\n");
 
     fclose (summaryfile);
-    exit (1);
+    return;
   }
 
 
@@ -802,6 +855,8 @@ main (int argc, char *argv[])
 
   gzprintf (indelfile,
 	    "Fragment\tPositions\tReference Base\tTotal Coverage\tReference Reads\tNo Deletions\tNo Insertions\tInsertion Sequence");
+  for (i = 1, j = 15; i <= no_contigs; i++, j += 15)
+    contig_starts[i] += j;
 
   BASE_NODE *ref_seq;
   int ss = sizeof (unsigned short) * 6;
@@ -840,28 +895,21 @@ main (int argc, char *argv[])
 	gzprintf (indelfile, "\n%s\t%d\t%c\t%d\t%d\t%d\t%d", contig_names[which],
 		  contig_pos, ref_seq->ref, tot_c, ref_reads, ref_seq->Dels, ref_seq->no_ins);
 	for (j = 0; j < ref_seq->no_ins; j++)
+	{
 	  gzprintf (indelfile, "\t%s", ref_seq->ins[j]);
+	  free (ref_seq->ins[j]);
+	}
+
       }
+      ref_seq->As = ref_seq->Cs = ref_seq->Gs = ref_seq->Ts = ref_seq->Dels = ref_seq->no_ins = 0;
 
     }
   gzclose (pileupfile);
   gzclose (indelfile);
+  for (i = 1, j = 15; i <= no_contigs; i++, j += 15)
+    contig_starts[i] -= j;
 
   double avg_reads = (double) total_bases / (double) genome_size;
-
-  printf ("\n================================================================");
-  printf ("\n================= Summary ======================================");
-  printf ("\n================================================================");
-  printf ("\n================================================================");
-  printf
-    ("\n\nTotal Number of Mapping reads of Any Kind\t%ld\tWith average Length\t%g\tAverage Depth\t%g\tAverage Insert Size\t%g",
-     total_reads, avg_readlen, avg_reads, avg_dist);
-  printf ("\n\nMapping Type\tCount\tFraction");
-  printf ("\nAll\t%ld\t1", tot_pairs);
-  for (i = 0; i <= NEITHER_MAP; i++)
-    if (strstr (mate_names[i], "Not Used") == NULL)
-      printf ("\n%s\t%ld\t%g", mate_names[i], mate_counts[i], (double) mate_counts[i] / (double) tot_pairs);
-  printf ("\n");
 
   fprintf (summaryfile, "\n================================================================");
   fprintf (summaryfile, "\n================= Summary ======================================");
@@ -878,10 +926,13 @@ main (int argc, char *argv[])
 	       (double) mate_counts[i] / (double) tot_pairs);
 
   fprintf (summaryfile, "\n");
+  tot_pairs = total_bases = total_reads = total_dist = no_dists = 0;
 
   fclose (summaryfile);
+  for (i = 0; i <= NEITHER_MAP; i++)
+    mate_counts[i] = 0;
+  return;
 
-  pthread_exit (NULL);
 
 }
 
@@ -889,10 +940,10 @@ main (int argc, char *argv[])
 void *
 map_everything (void *threadid)
 {
+  // long tid;
   PTHREAD_DATA_NODE *td;
 
   td = (PTHREAD_DATA_NODE *) threadid;
-  // long tid;
   // tid = td->tid;
   int iter;
   int ms = MAX_READ_LENGTH;
@@ -1080,7 +1131,7 @@ map_everything (void *threadid)
 	  smith_waterman_align (bases1[i], pass_len1[i], iread1[(int) orients1[i]], len[1], penalty_matrix1[i],
 				this_bonus, gap_open, gap_extend, start_temp);
 	// printf("\n Back from SM align with score %g \n\n",this_score);
-	if (this_score > top_score && this_score > good_score)
+	if (this_score > top_score && this_score >= good_score)
 	{
 	  top_score = this_score;
 	  top_score_count = 1;
@@ -1088,7 +1139,7 @@ map_everything (void *threadid)
 	  for (m = 0; m < 3; m++)
 	    start1[m] = start_temp[m];
 	}
-	else if (fabs (this_score - top_score) < 0.0001)
+	else if ((fabs (this_score - top_score) < 0.0001) && (top_score_count > 0))
 	  top_score_count++;
       }
       if (top_score_count == 0)
@@ -1126,7 +1177,7 @@ map_everything (void *threadid)
 	this_score =
 	  smith_waterman_align (bases2[i], pass_len2[i], iread2[(int) orients2[i]], len[3], penalty_matrix2[i],
 				this_bonus, gap_open, gap_extend, start_temp);
-	if (this_score > top_score && this_score > good_score)
+	if (this_score > top_score && this_score >= good_score)
 	{
 	  top_score = this_score;
 	  top_score_count = 1;
@@ -1134,7 +1185,7 @@ map_everything (void *threadid)
 	  for (m = 0; m < 3; m++)
 	    start2[m] = start_temp[m];
 	}
-	else if (fabs (this_score - top_score) < 0.0001)
+	else if ((fabs (this_score - top_score) < 0.0001) && (top_score_count > 0))
 	  top_score_count++;
       }
       if (top_score_count == 0)
@@ -1145,7 +1196,7 @@ map_everything (void *threadid)
       else if (top_score_count == 1)
       {
 	first_call = UNIQUE_SINGLE;
-	read2 = iread1[(int) orients2[bsm]];
+	read2 = iread2[(int) orients2[bsm]];
 	start_match2 = bsm;
       }
       else
@@ -1178,7 +1229,8 @@ map_everything (void *threadid)
     {
 
       // printf("About to backtrack with read1 %s for thread %ld with start_match1 = %d pass_len = %d  len = %d\n\n",
-      //    read1,tid,start_match1,pass_len1[start_match1],len[1]);
+      //    read1,td->tid,start_match1,pass_len1[start_match1],len[1]);
+      // printf("\n About to backtrack with sm1 = %d\n",start_match1);
 
       if (smith_waterman_backtrack
 	  (bases1[start_match1], pass_len1[start_match1], read1, len[1], penalty_matrix1[start_match1], gap_open,
@@ -1199,7 +1251,8 @@ map_everything (void *threadid)
       // printf("\n In here and about to print something, but I think bad things might happen with start_match2 = %d pass_len2 = %d len3 = %d read2 = %ld \n\n",
       //      start_match2,pass_len2[start_match2],len[3],(long)read2);
       // printf("About to backtrack with read2 %s for thread %ld with start_match2 = %d pass_len = %d  len = %d\n\n",
-      //    read2,tid,start_match2,pass_len2[start_match2],len[3]);
+      //    read2,td->tid,start_match2,pass_len2[start_match2],len[3]);
+      // printf("\n About to backtrack with sm2 = %d\n",start_match2);
       if (smith_waterman_backtrack
 	  (bases2[start_match2], pass_len2[start_match2], read2, len[3], penalty_matrix2[start_match2], gap_open,
 	   gap_extend, start2))
@@ -1297,12 +1350,9 @@ find_mate_pairs (char **seq1, char **seq2, unsigned int *pos1, char *lor1, int r
 		 double **reverse_mat, double **gap_open, double **gap_extend, BASE_NODE ** base1, BASE_NODE ** base2)
 {
   int k, i;
-  int start_temp1[3];
-  int start_temp2[3];
+  int **start_temp1;
+  int **start_temp2;
   int perfect = 0;
-  int size_mismatch = 0;
-  int broken = 0;
-  int frag_count = 0;
   int l1, l3;
   double *smax1, *smax2;
   double this_1, this_2;
@@ -1311,11 +1361,16 @@ find_mate_pairs (char **seq1, char **seq2, unsigned int *pos1, char *lor1, int r
   long temp_dist = 0;
   int which1, which2;
   double tot_best = -1e5;
-  read1[0] = NULL;
-  read2[0] = NULL;
+  *read1 = NULL;
+  *read2 = NULL;
 
-  start_temp1[0] = start_temp1[1] = start_temp1[2] = 0;
-  start_temp2[0] = start_temp2[1] = start_temp2[2] = 0;
+  start_temp1 = imatrix (0, n1, 0, 2);
+  start_temp2 = imatrix (0, n2, 0, 2);
+
+  for (i = 0; i < n1; i++)
+    start_temp1[i][0] = start_temp1[i][1] = start_temp1[i][2] = 0;
+  for (i = 0; i < n2; i++)
+    start_temp2[i][0] = start_temp2[i][1] = start_temp2[i][2] = 0;
 
   if (n1 > 12000 || n2 > 12000)
     return NON_MIS;
@@ -1323,8 +1378,9 @@ find_mate_pairs (char **seq1, char **seq2, unsigned int *pos1, char *lor1, int r
   smax1 = dvector (0, max_hits);
   smax2 = dvector (0, max_hits);
   for (i = 0; i <= max_hits; i++)
+  {
     smax1[i] = smax2[i] = -1.0;
-
+  }
   best_len[1] = best_len[2] = best_len[3] = best_len[4] = 0;
 
   best_len[1] = len[1] = l1 = rl1;
@@ -1333,161 +1389,179 @@ find_mate_pairs (char **seq1, char **seq2, unsigned int *pos1, char *lor1, int r
   double good_score2 = l3 * MIN_ALIGN * match_bonus;
 
   // printf("\n\n Entered find_mate_pairs and looking for .%s. and .%s. n1 = %d  n2 = %d  l1 = %d  l3 = %d\n\n",seq1[0],seq2[0],n1,n2,l1,l3);
+
   for (which1 = 0; which1 < n1; which1++)
   {
-    for (which2 = 0; which2 < n2; which2++)
+    this_mat = forward_mat;
+    if (lor1[which1])
+      this_mat = reverse_mat;
+    smax1[which1] =
+      smith_waterman_align (base1[which1], plen2[which1], seq1[(int) lor1[which1]], l1, p1_save[which1], this_mat,
+			    gap_open, gap_extend, start_temp1[which1]);
+  }
+  for (which2 = 0; which2 < n2; which2++)
+  {
+    this_mat = forward_mat;
+    if (lor2[which2])
+      this_mat = reverse_mat;
+    smax2[which2] =
+      smith_waterman_align (base2[which2], plen4[which2], seq2[(int) lor2[which2]], l3, p2_save[which2], this_mat,
+			    gap_open, gap_extend, start_temp2[which2]);
+
+  }
+  int slip_count = 0;
+
+  for (which1 = 0; which1 < n1; which1++)
+    if (smax1[which1] >= good_score1)
     {
-      unsigned int p1 = pos1[which1];
-      unsigned int p2 = pos2[which2];
-      temp_dist = labs ((long) p1 - (long) p2);
-      // printf("\n p1 = %u  p2 = %u dist = %ld",p1,p2,temp_dist);
-      if (temp_dist < 1e6)
-      {
-	int or1 = lor1[which1];
-	int or2 = lor2[which2];
-	int is_perfect = ((temp_dist >= min_dist) && (temp_dist <= max_dist) && (or1 != or2));
-	// printf("\n for i = %d   j = %d p1=%u  p2 = %u is_perfect = %d\n\n",which1,which2,p1,p2,is_perfect);
-	if (is_perfect || (perfect < 1))
+      for (which2 = 0; which2 < n2; which2++)
+	if (smax2[which2] >= good_score2)
 	{
-	  if (smax1[which1] < 0)
+	  unsigned int p1 = pos1[which1];
+	  unsigned int p2 = pos2[which2];
+	  temp_dist = labs ((long) p1 - (long) p2);
+	  // printf("\n p1 = %u  p2 = %u dist = %ld",p1,p2,temp_dist);
+	  int or1 = lor1[which1];
+	  int or2 = lor2[which2];
+	  int is_perfect = ((temp_dist >= min_dist) && (temp_dist <= max_dist) && (or1 != or2));
+	  // printf("\n for i = %d   j = %d p1=%u  p2 = %u is_perfect = %d\n\n",which1,which2,p1,p2,is_perfect);
+	  if (is_perfect)
 	  {
-	    this_mat = forward_mat;
-	    if (or1)
-	      this_mat = reverse_mat;
-	    this_1 =
-	      smith_waterman_align (base1[which1], plen2[which1], seq1[or1], l1, p1_save[which1], this_mat, gap_open,
-				    gap_extend, start_temp1);
-	    smax1[which1] = this_1;
-	  }
-	  else
 	    this_1 = smax1[which1];
-
-	  if (smax2[which2] < 0)
-	  {
-	    this_mat = forward_mat;
-	    if (or2)
-	      this_mat = reverse_mat;
-
-	    this_2 =
-	      smith_waterman_align (base2[which2], plen4[which2], seq2[or2], l3, p2_save[which2], this_mat, gap_open,
-				    gap_extend, start_temp2);
-	    smax2[which2] = this_2;
-	  }
-	  else
 	    this_2 = smax2[which2];
-
-	  double inc = this_1 + this_2 - tot_best;
-	  // printf("\n Checking whether or not to store %g and this_1 = %g  this_2 = %g\n\n",inc,this_1,this_2);
-	  if (inc > 0.001)
-	  {
-	    // printf("\n About to store everything i=%d j = %d l1 = %d  l2 = %d  l3 = %d  l4 = %d this1 = %g  this2 = %g  good = %g",
-	    //   which1,which2,l1,l2,l3,l4,this_1,this_2,good_score1);
-	    if (is_perfect && this_1 > good_score1 && this_2 > good_score2)
+	    double inc = smax1[which1] + smax2[which2] - tot_best;
+	    if (inc > 0.001)
 	    {
+	      // printf("\n About to store everything i=%d j = %d l1 = %d  l2 = %d  l3 = %d  l4 = %d this1 = %g  this2 = %g  good = %g",
+	      //   which1,which2,l1,l2,l3,l4,this_1,this_2,good_score1);
 	      perfect = 1;
-	      size_mismatch = 0;
+	      *start_match1 = which1;
+	      *start_match2 = which2;
+	      tot_best = this_1 + this_2;
+	      slip_count = 1;
 	    }
-	    else
+	    else if (inc > -0.001)
 	    {
-	      size_mismatch = 1;
-	      // *dist = temp_dist;
-	    }
-	    frag_count = 0;
-	    tot_best = this_1 + this_2;
-	    best_len[2] = plen2[which1];
-	    best_len[4] = plen4[which2];
-	    *start_match1 = which1;
-	    *start_match2 = which2;
-	    good_score1 = this_1;
-	    good_score2 = this_2;
-	    for (k = 0; k < 3; k++)
-	    {
-	      start1[k] = start_temp1[k];
-	      start2[k] = start_temp2[k];
-	    }
-	  }
-	  else if (inc > -0.001)
-	  {
-	    if (is_perfect)
+	      if ((*start_match1 == which1) || (*start_match2 == which2))
+		slip_count++;
 	      perfect++;
-	    else
-	      size_mismatch++;
+	    }
 	  }
-
 	}
-	// printf("\n Made it to the bottom \n\n");
-      }
-      else
-	broken++;
     }
 
-  }
-
-  // printf("\n\tLeaving with smax1 = %g  smax2 = %g  perfect = %d l2=%d l4=%d \n\n",smax1[1],smax2[1],perfect,best_len[2],best_len[4]);
+  // printf("\n\tLeaving with smax1 = %g  smax2 = %g  perfect = %d l2=%d l4=%d \n\n",smax1[0],smax2[0],perfect,best_len[2],best_len[4]);
 
   int exit_code = NEITHER_MAP;
-  if (frag_count > 0)
+  if (perfect > 0)
   {
-    if (perfect > 0)
-      exit_code = NON_MATE;
+    int best1 = *start_match1;
+    int best2 = *start_match2;
+    *read1 = seq1[(int) lor1[best1]];
+    *read2 = seq2[(int) lor2[best2]];
+    best_len[2] = plen2[best1];
+    best_len[4] = plen4[best2];
+    for (k = 0; k < 3; k++)
+    {
+      start1[k] = start_temp1[best1][k];
+      start2[k] = start_temp2[best2][k];
+    }
+    if (perfect == 1)
+      exit_code = UNIQUE_MATE;
+    else if (slip_count == perfect)
+      exit_code = UNIQUE_SLIP;
     else
-      exit_code = NON_MIS;
+    {
+      exit_code = NON_MATE;
+      *read1 = NULL;
+      *read2 = NULL;
+    }
   }
-  else if (perfect < 1)
+  else
   {
     int best1 = 0;
     int best2 = 0;
+    int m1_c = 0;
+    int m2_c = 0;
     for (i = 1; i < n1; i++)
       if (smax1[i] > smax1[best1])
-	best1 = i;
-
-    for (i = 1; i < n1; i++)
-      if (smax2[i] > smax2[best2])
-	best2 = i;
-
-    if (smax1[best1] > good_score1)
-      if (smax2[best2] > good_score2)
       {
-	read1[0] = seq1[(int) lor1[best1]];
-	read2[0] = seq2[(int) lor2[best2]];
-	exit_code = UNIQUE_MIS;
+	best1 = i;
+	m1_c = 1;
+      }
+      else if (smax1[i] - smax1[best1] > -0.0001)
+	m1_c++;
+    for (i = 1; i < n2; i++)
+      if (smax2[i] > smax2[best2])
+      {
+	best2 = i;
+	m2_c = 1;
+      }
+      else if (smax2[i] - smax2[best1] > -0.0001)
+	m2_c++;
+
+    *read1 = seq1[(int) lor1[best1]];
+    *read2 = seq2[(int) lor2[best2]];
+    best_len[2] = plen2[best1];
+    best_len[4] = plen4[best2];
+    *start_match1 = best1;
+    *start_match2 = best2;
+    for (k = 0; k < 3; k++)
+    {
+      start1[k] = start_temp1[best1][k];
+      start2[k] = start_temp2[best2][k];
+    }
+
+    if (smax1[best1] >= good_score1)
+    {
+      if (m1_c < 2)
+      {
+	*read1 = seq1[(int) lor1[best1]];
+	if ((smax2[best2] >= good_score2) && (m2_c < 2))
+	{
+	  *read2 = seq2[(int) lor2[best2]];
+	  exit_code = UNIQUE_MIS;
+	}
+	else
+	{
+	  *read2 = NULL;
+	  exit_code = UNIQUE_SINGLE;
+	}
       }
       else
       {
-	read2[0] = NULL;
-	read1[0] = seq1[(int) lor1[best1]];
-	exit_code = UNIQUE_SINGLE;
+	*read1 = NULL;
+	if ((smax2[best2] >= good_score2) && (m2_c < 2))
+	{
+	  *read2 = seq2[(int) lor2[best2]];
+	  exit_code = UNIQUE_SINGLE;
+	}
+	else
+	{
+	  *read2 = NULL;
+	  exit_code = NON_MIS;
+	}
       }
-    else if (smax2[best2] > good_score2)
-    {
-      read1[0] = NULL;
-      read2[0] = seq2[(int) lor2[best2]];
-      exit_code = UNIQUE_SINGLE;
     }
-  }
-  else if ((perfect > 0) || (size_mismatch > 0))
-  {
-    len[2] = best_len[2];
-    len[4] = best_len[4];
-    read1[0] = seq1[(int) lor1[*start_match1]];
-    read2[0] = seq2[(int) lor2[*start_match2]];
-
-    if (perfect == 1)
-      exit_code = UNIQUE_MATE;
-    else if (perfect > 1)
-      exit_code = UNIQUE_SLIP;
-    else if (size_mismatch == 1)
-      exit_code = UNIQUE_MIS;
     else
     {
-      read1[0] = NULL;
-      read2[0] = NULL;
-      exit_code = NON_MIS;
+      *read1 = NULL;
+      if ((smax2[best2] >= good_score2) && (m2_c < 2))
+      {
+	*read2 = seq2[(int) lor2[best2]];
+	exit_code = UNIQUE_SINGLE;
+      }
+      else
+      {
+	*read2 = NULL;
+	exit_code = NON_MIS;
+      }
     }
+    //printf("\n Exiting with code = %d read1 = %s read2 = %s score1 = %g score2 = %g",exit_code,*read1,*read2,smax1[best1],smax2[best2]);
   }
-  else if (broken > 0)
-    exit_code = FRAG_MIS;
 
+  free_imatrix (start_temp1, 0, n1, 0, 2);
+  free_imatrix (start_temp2, 0, n2, 0, 2);
   free_dvector (smax1, 0, max_hits);
   free_dvector (smax2, 0, max_hits);
   return exit_code;
@@ -1600,6 +1674,7 @@ initial_map (char **read1, int seq_len, char *orient_return, unsigned int *match
   int min_match = maxim (1, total_cuts);
   if (total_cuts > 4)
     min_match = (4 * (total_cuts)) / 5;
+  min_match = minim (min_match, 4);
 
   int *segs_matched;
   hits = uvector (0, max_hits);
@@ -1722,6 +1797,7 @@ smith_waterman_backtrack (BASE_NODE * base, int nn, char *seq, int mm, double **
   k = start[0];
   i = start[1];
   j = start[2];
+  // printf("\n In backtrack with starting score of %lg",S[k][i][j]);
 
   i1 = j1 = 0;
 
@@ -1801,6 +1877,8 @@ smith_waterman_backtrack (BASE_NODE * base, int nn, char *seq, int mm, double **
 
       if (maxj != j)
       {
+	// if(seq[j1] != base[i1].ref)
+	// printf("\n Mismatch at seq position %d and genome position %d %c %c",j1,i1,seq[j1],base[i1].ref);
 	if (seq[j1] == 'A')
 	  base[i1].As++;
 	else if (seq[j1] == 'T')
