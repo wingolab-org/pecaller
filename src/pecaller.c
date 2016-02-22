@@ -270,6 +270,7 @@ main (int argc, char *argv[])
     printf ("\n Can not open file %s\n", ss);
     exit (1);
   }
+  gzbuffer (outfile, 131072);
 
   sprintf (ss, "%s.snp", argv[4]);
   if ((snpfile = fopen (ss, "w")) == (FILE *) NULL)
@@ -291,6 +292,7 @@ main (int argc, char *argv[])
     printf ("\n Can not open file %s for writing\n", ss);
     exit (1);
   }
+  gzbuffer (pilefile, 131072);
 
   guide_file = stdout;
 
@@ -439,6 +441,8 @@ main (int argc, char *argv[])
     printf ("\n Can not open file %s for reading\n", sss);
     exit (1);
   }
+  gzbuffer (reffile, 131072);
+
   printf ("\n About to initialize the genome buffer \n\n");
   init_genome_buffer (reffile);
 
@@ -496,6 +500,7 @@ main (int argc, char *argv[])
 	printf ("\n Can not open file %s which should contain pedigree information\n", pDirEnt->d_name);
 	exit (1);
       }
+      gzbuffer (pileupfile[i], 131072);
       strcpy (sss, pDirEnt->d_name);
       token = strtok (sss, "\n.\t \0");
       strcpy (filenames[i++], token);
