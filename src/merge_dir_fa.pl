@@ -11,7 +11,7 @@
 #                 chromosomes;
 
 # The code itself is Copyright (C) 2016, by Thomas S. Wingo
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
@@ -44,8 +44,7 @@ my ( @chrs, %chrFasta, %chrFastaCount, %chrFastaPrinted );
 my ( $dir_name, $out_ext, $chr_list );
 
 # get options
-die
-"Usage: $0 
+die "Usage: $0 
   -d <dir with fasta files> 
   -c <chr_list (e.g., 1-19,M,X,Y)> 
   -o <base name for output fa file>\n"
@@ -53,19 +52,21 @@ die
   'c|chr_list=s' => \$chr_list,
   'd|dir=s'      => \$dir_name,
   'o|out=s'      => \$out_ext,
-  ) and $chr_list
-    and $dir_name
-    and $out_ext;
+  )
+  and $chr_list
+  and $dir_name
+  and $out_ext;
 
 my $chrs_aref = ProcChromList($chr_list);
-PrintVaildChrList( $chrs_aref );
+PrintVaildChrList($chrs_aref);
 
 # read directory with fa files
 my $dir = Path::Tiny->new($dir_name);
 for my $file ( $dir->children ) {
   next unless $file->basename =~ m/\.fa\.gz\z/;
   ( my $name = $file->basename ) =~ s/\.fa\.gz\z//;
-  my $fhz = new IO::Uncompress::Gunzip $file->absolute->stringify or die "$GunzipError: $!\n";
+  my $fhz = new IO::Uncompress::Gunzip $file->absolute->stringify
+    or die "$GunzipError: $!\n";
   local $/;
   $chrFasta{$name}      = <$fhz>;
   $chrFastaCount{$name} = length $chrFasta{$name};
@@ -121,15 +122,15 @@ sub ProcChromList {
   my @chr_entries = split /\,/, $list;
   for my $chr (@chr_entries) {
     if ( $chr =~ m/(\d+)\-(\d+)/ ) {
-      if ($1 > $2) {
+      if ( $1 > $2 ) {
         say "ERROR: expected range to be ascending, but got '$1'-'$2' from '$list'";
         exit(1);
       }
-      for ( my $i = $1 ; $i <= $2 ; $i++ ) {
+      for ( my $i = $1; $i <= $2; $i++ ) {
         push @chrs, "chr$i";
       }
     }
-    elsif ( $chr =~ m/\A[\d|M|X|Y]+\z/  ) {
+    elsif ( $chr =~ m/\A[\d|M|X|Y]+\z/ ) {
       push @chrs, "chr$chr";
     }
     else {
