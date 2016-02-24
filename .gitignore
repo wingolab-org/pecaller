@@ -54,3 +54,5 @@ auto-save-list
 tramp
 .\#*
 
+# perl
+.tidyall.d
