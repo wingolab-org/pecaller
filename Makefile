@@ -23,6 +23,7 @@ build:
 
 slink_pl:
 	cp ./src/*.pl bin/
+	chmod 755 bin/*
 
 ## end of Makefile
 # DO NOT DELETE THIS LINE -- make depend depends on it.
