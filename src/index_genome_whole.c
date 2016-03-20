@@ -61,7 +61,7 @@ void free_dmatrix (double **m, int nrl, int nrh, int ncl, int nch);
 void free_cmatrix (char **m, int nrl, int nrh, int ncl, int nch);
 void free_ucmatrix (unsigned char **m, int nrl, int nrh, int ncl, int nch);
 void free_ulmatrix (unsigned long **m, int nrl, int nrh, int ncl, int nch);
-void nrerror (char *error_text);
+void dump_error (char *error_text);
 int **imatrix (int nrl, int nrh, int ncl, int nch);
 void free_imatrix (int **m, int nrl, int nrh, int ncl, int nch);
 void set_next (char *sss, int *i, int *j);
@@ -667,7 +667,7 @@ ran1 (int *idum)
   ix3 = (IA3 * ix3 + IC3) % M3;
   j = (int) (1 + ((97 * ix3) / M3));
   if (j > 97 || j < 1)
-    nrerror ("RAN1: This cannot happen.");
+    dump_error ("RAN1: This cannot happen.");
   temp = r[j];
   r[j] = (ix1 + ix2 * RM2) * RM1;
   return temp;
@@ -774,7 +774,7 @@ gamdev (int ia, int *idum)
   double am, e, s, v1, v2, x, y;
 
   if (ia < 1)
-    nrerror ("Error in routine GAMDEV");
+    dump_error ("Error in routine GAMDEV");
   if (ia < 6)
   {
     x = 1.0;
@@ -890,7 +890,7 @@ cvector (int nl, int nh)
 
   v = (char *) malloc ((unsigned) (nh - nl + 1) * sizeof (char));
   if (!v)
-    nrerror ("allocation failure in cvector()");
+    dump_error ("allocation failure in cvector()");
   return v - nl;
 }
 
@@ -901,7 +901,7 @@ ucvector (int nl, int nh)
 
   v = (unsigned char *) malloc ((unsigned) (nh - nl + 1) * sizeof (unsigned char));
   if (!v)
-    nrerror ("allocation failure in cvector()");
+    dump_error ("allocation failure in cvector()");
   return v - nl;
 }
 
@@ -912,7 +912,7 @@ ivector (int nl, int nh)
 
   v = (int *) malloc ((unsigned) (nh - nl + 1) * sizeof (int));
   if (!v)
-    nrerror ("allocation failure in ivector()");
+    dump_error ("allocation failure in ivector()");
   return v - nl;
 }
 
@@ -923,7 +923,7 @@ uvector (unsigned int nl, unsigned int nh)
 
   v = (unsigned int *) malloc ((unsigned) (nh - nl + 1) * sizeof (unsigned int));
   if (!v)
-    nrerror ("allocation failure in uvector()");
+    dump_error ("allocation failure in uvector()");
   return v - nl;
 }
 
@@ -934,7 +934,7 @@ ulvector (int nl, int nh)
 
   v = (unsigned long *) malloc ((unsigned) (nh - nl + 1) * sizeof (long));
   if (!v)
-    nrerror ("allocation failure in ulvector()");
+    dump_error ("allocation failure in ulvector()");
   return v - nl;
 }
 
@@ -945,7 +945,7 @@ dvector (int nl, int nh)
 
   v = (double *) malloc ((unsigned) (nh - nl + 1) * sizeof (double));
   if (!v)
-    nrerror ("allocation failure in dvector()");
+    dump_error ("allocation failure in dvector()");
   return v - nl;
 }
 
@@ -957,14 +957,14 @@ imatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (int **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (int *));
   if (!m)
-    nrerror ("allocation failure 1 in imatrix()");
+    dump_error ("allocation failure 1 in imatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (int *) malloc ((unsigned) (nch - ncl + 1) * sizeof (int));
     if (!m[i])
-      nrerror ("allocation failure 2 in imatrix()");
+      dump_error ("allocation failure 2 in imatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -978,14 +978,14 @@ umatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (unsigned int **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (unsigned int *));
   if (!m)
-    nrerror ("allocation failure 1 in umatrix()");
+    dump_error ("allocation failure 1 in umatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (unsigned int *) malloc ((unsigned) (nch - ncl + 1) * sizeof (unsigned int));
     if (!m[i])
-      nrerror ("allocation failure 2 in umatrix()");
+      dump_error ("allocation failure 2 in umatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -999,14 +999,14 @@ ulmatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (unsigned long **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (unsigned long *));
   if (!m)
-    nrerror ("allocation failure 1 in ulmatrix()");
+    dump_error ("allocation failure 1 in ulmatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (unsigned long *) malloc ((unsigned) (nch - ncl + 1) * sizeof (unsigned long));
     if (!m[i])
-      nrerror ("allocation failure 2 in ulmatrix()");
+      dump_error ("allocation failure 2 in ulmatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -1042,14 +1042,14 @@ dmatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (double **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (double *));
   if (!m)
-    nrerror ("allocation failure 1 in dmatrix()");
+    dump_error ("allocation failure 1 in dmatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (double *) malloc ((unsigned) (nch - ncl + 1) * sizeof (double));
     if (!m[i])
-      nrerror ("allocation failure 2 in dmatrix()");
+      dump_error ("allocation failure 2 in dmatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -1073,14 +1073,14 @@ cmatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (char **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (char *));
   if (!m)
-    nrerror ("allocation failure 1 in cmatrix()");
+    dump_error ("allocation failure 1 in cmatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (char *) malloc ((unsigned) (nch - ncl + 1) * sizeof (char));
     if (!m[i])
-      nrerror ("allocation failure 2 in cmatrix()");
+      dump_error ("allocation failure 2 in cmatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -1095,14 +1095,14 @@ ucmatrix (int nrl, int nrh, int ncl, int nch)
 
   m = (unsigned char **) malloc ((unsigned) (nrh - nrl + 1) * sizeof (unsigned char *));
   if (!m)
-    nrerror ("allocation failure 1 in cmatrix()");
+    dump_error ("allocation failure 1 in cmatrix()");
   m -= nrl;
 
   for (i = nrl; i <= nrh; i++)
   {
     m[i] = (unsigned char *) malloc ((unsigned) (nch - ncl + 1) * sizeof (unsigned char));
     if (!m[i])
-      nrerror ("allocation failure 2 in cmatrix()");
+      dump_error ("allocation failure 2 in cmatrix()");
     m[i] -= ncl;
   }
   return m;
@@ -1204,12 +1204,9 @@ rbeta (double u, double v)
 /*---------------------------------------------------------------------*/
 
 void
-nrerror (char *error_text)
+dump_error (char *ss)
 {
-
-  fprintf (outfile, "Numerical Recipes run-time error...\n");
-  fprintf (outfile, "%s\n", error_text);
-  fprintf (outfile, "...now exiting to system...\n");
+  printf ("\n Unrecoverable error\n %s \n  Exiting now \n", ss);
   exit (1);
 }
 
