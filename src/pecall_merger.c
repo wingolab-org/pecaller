@@ -537,10 +537,11 @@ main (int argc, char *argv[])
 	  }
 	  thisa++;
 	}
-      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s", contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref,
-	       allele_string, count_string, snptype);
+      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s",
+	       contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref, allele_string, count_string, snptype);
       for (j = 0; j < last_sample; j++)
-	fprintf (outfile, "\t%c\t%g", int_to_char[(int) bases[i]->calls[samples[j]->which]],
+	fprintf (outfile, "\t%c\t%g",
+		 int_to_char[(int) bases[i]->calls[samples[j]->which]],
 		 ((float) bases[i]->quality[samples[j]->which]) / 255.0);
     }
   }
