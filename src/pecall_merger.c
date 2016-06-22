@@ -78,7 +78,7 @@ BNODE *base_alloc ();
 int find_chrom (char **list, int n, char *s);
 int compare_base (const void *a, const void *b);
 void get_het_alleles (int i, int *a, int *b, int ref);
-void pedBaseCall(char *sss, char base, char ref );
+char geno_call(int base, int ref );
 
 #define HARD_N 15
 #define SOFT_N 14
@@ -506,7 +506,14 @@ main (int argc, char *argv[])
                 allele_counts[j][i][b]++;
         }
     }
+
+    printf("sample count: %d, base count: %d\n", last_sample, last_base);
     
+    char **pedigree_matrix = cmatrix (0, last_sample, 0, last_base);
+    for (i = 0; i < last_sample; i++)
+      for (j = 0; j < last_base; j++)
+        pedigree_matrix[i][j] = 0;
+
     char snptype[128];
     char count_string[128];
     char allele_string[128];
@@ -558,12 +565,18 @@ main (int argc, char *argv[])
                 }
             fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s", contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref,
                      allele_string, count_string, snptype);
-            fprintf (mapfile, "%s\tMarker_%c;%s;%s;%s\t0\t%d\n", contig_names[bases[i]->chrom], bases[i]->ref,
-                     allele_string, count_string, snptype, bases[i]->pos);
+
+            char *chrName = strtok (contig_names[bases[i]->chrom], "chr_");
+            fprintf (mapfile, "%s\tVar=%s;Ref=%c;Alleles=%s;AlleleCount=%s\t0\t%d\n", 
+                chrName, snptype, bases[i]->ref, allele_string, count_string, 
+                bases[i]->pos);
             
             for (j = 0; j < this_s; j++)
+            {
                 fprintf (outfile, "\t%c\t%g", int_to_char[(int) bases[i]->calls[samples[j]->which]],
                          ((float) bases[i]->quality[samples[j]->which]) / 255.0);
+                pedigree_matrix[j][i] = geno_call( (int) bases[i]->calls[samples[j]->which], char_to_int[bases[i]->ref] );
+            }
             for (j = this_s; j < last_sample; j++)
                 fprintf (outfile, "\tN\t1");
         }
@@ -574,23 +587,34 @@ main (int argc, char *argv[])
     for ( i = 0; i < last_sample; i++ ) {
       fprintf( pedfile, "0\t%s\t0\t0\t0\t0", samples[i]->name );
       for ( j = 0; j < last_base; j++ ) {
-        pedBaseCall( sss, bases[j]->calls[samples[i]->which], bases[j]->ref );
-        fprintf( pedfile, "%s", sss ); 
+        char geno = pedigree_matrix[i][j];
+        if ( geno == 0 )
+        {
+          fprintf( pedfile, "\t0\t0" );
+        }
+        if ( geno == 1 )
+        {
+          fprintf( pedfile, "\t1\t1" );
+        }
+        else if ( geno == 2 ) 
+        {
+          fprintf( pedfile, "\t1\t2" );
+        } 
+        else if ( geno == 3 ) 
+        {
+          fprintf( pedfile, "\t2\t2" );
+        }
       }
       fprintf( pedfile, "\n");
     }
     fclose(mapfile);
     fclose(pedfile);
-
-    return 0;
-    
+    free_cmatrix(pedigree_matrix, 0, last_sample, 0, last_base);
+  
+    return 0;  
 }
 
-void pedBaseCall(char *sss, char base, char ref )
-{
-    int a, b;
-    a = b = 14;
-
+char geno_call( int base, int ref ) {
     /*
     int_to_char[0] = 'A';
     int_to_char[1] = 'C';
@@ -608,18 +632,22 @@ void pedBaseCall(char *sss, char base, char ref )
     int_to_char[13] = 'H';
     */
     
-
-  if ( base == ref ) {
-    a = b = 1;
+  // homozygote ref
+  if ( base == ref ) 
+  {
+    return 1;
   }
-  else if ( base < 6 ) {
-    a = b = 2;
+  // homozygote minor allele
+  else if ( base < 6 ) 
+  {
+    return 3;
   }
-  else if ( base < 14 ) {
-    a = 1;
-    b = 2;
+  // heterozygote
+  else if ( base < 14 ) 
+  {
+    return 2;
   }
-  sprintf( sss, "\t%d\t%d", a, b);
+  return 0;
 }
 
 /*---------------------------------------------------------------------*/
