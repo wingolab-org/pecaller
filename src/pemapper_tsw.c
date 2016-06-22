@@ -224,7 +224,8 @@ main (int argc, char *argv[])
   file2_buf = NULL;
   buffer1_current = buffer2_current = 0;
   buffer1_end = buffer2_end = 0;
-  int fastq_read_offset = 0;
+  int start_fastq_read_offset = 0;
+  int end_fastq_read_offset = 0;
   out_names = cmatrix (0, 2000, 0, 512);
   for (i = 0; i <= 2000; i++)
     out_names[i][0] = '\0';
@@ -233,24 +234,25 @@ main (int argc, char *argv[])
   if (c_end != 'P' && c_end != 'S')
   {
     printf
-      ("\nUsage: %s out_file sdx_file paired_or_single_or_array[p,s,pa,ps] file1 [file2] [max_dist] [min_dist] is_bisulfite[y,n] min_match_percentage max_threads max_reads read_offset\n",
+      ("\nUsage: %s out_file sdx_file paired_or_single_or_array[p,s,pa,ps] file1 [file2] [max_dist] [min_dist] is_bisulfite[y,n] min_match_percentage max_threads max_reads trim_from_start trim_from_end\n",
        argv[0]);
     exit (1);
   }
   if (c_end == 'S')
   {
     pair_flag = FALSE;
-    if (argc != 10)
+    if (argc != 11)
     {
       printf
-	("\nUsage: %s out_file sdx_file [s,sa] file1 is_bisulfite[y,n] min_match_percentage max_threads max_reads read_offset\n",
+	("\nUsage: %s out_file sdx_file [s,sa] file1 is_bisulfite[y,n] min_match_percentage max_threads max_reads trim_from_start trim_from_end\n",
 	 argv[0]);
       exit (1);
     }
     MAX_THREADS = (int) atoi (argv[7]);
     MIN_ALIGN = (double) atof (argv[6]);
     max_reads = (long) atoi (argv[8]);
-    fastq_read_offset = atoi (argv[9]);
+    start_fastq_read_offset = atoi (argv[9]);
+    end_fastq_read_offset = atoi (argv[10]);
     maps1 = malloc (sizeof (unsigned int) * max_reads);
     if (c_array == 'A')
     {
@@ -295,17 +297,18 @@ main (int argc, char *argv[])
   else
   {
     pair_flag = TRUE;
-    if (argc != 13)
+    if (argc != 14)
     {
       printf
-	("\nUsage: %s out_file sdx_file [p,pa] file1 file2 max_dist min_dist is_bisulfite[y,n] min_match_percentage max_threads max_reads read_offset\n",
+	("\nUsage: %s out_file sdx_file [p,pa] file1 file2 max_dist min_dist is_bisulfite[y,n] min_match_percentage max_threads max_reads trim_from_start trim_from_end\n",
 	 argv[0]);
       exit (1);
     }
     MAX_THREADS = (int) atoi (argv[10]);
     MIN_ALIGN = (double) atof (argv[9]);
     max_reads = (long) atol (argv[11]);
-    fastq_read_offset = atoi (argv[12]);
+    start_fastq_read_offset = atoi (argv[12]);
+    end_fastq_read_offset = atoi (argv[13]);
     max_dist = (int) atoi (argv[6]);
     min_dist = (int) atoi (argv[7]);
     if ((strchr (argv[8], 'Y')) || (strchr (argv[8], 'y')))
@@ -687,14 +690,18 @@ main (int argc, char *argv[])
       }
       sss2 = my_gzgets (innfile2, file2_buf, &buffer2_end, &buffer2_current);
       sss2 = my_gzgets (innfile2, file2_buf, &buffer2_end, &buffer2_current);
-      sss2 += fastq_read_offset;
+      sss2 += start_fastq_read_offset;
       seq_len2 = strlen (sss2);
+      seq_len2 = maxim (0, seq_len2 - end_fastq_read_offset);
+      sss2[seq_len2] = '\0';
     }
     sss1 = my_gzgets (innfile1, file1_buf, &buffer1_end, &buffer1_current);
     sss1 = my_gzgets (innfile1, file1_buf, &buffer1_end, &buffer1_current);
-    sss1 += fastq_read_offset;
+    sss1 += start_fastq_read_offset;
 
     int seq_len = strlen (sss1);
+    seq_len = maxim (0, seq_len - end_fastq_read_offset);
+    sss1[seq_len] = '\0';
     int not_done = TRUE;
     current_read = 0;
     printf ("\n Ready to map \n");
@@ -782,12 +789,16 @@ main (int argc, char *argv[])
 	  not_done = FALSE;
 	else
 	{
-	  sss1 += fastq_read_offset;
+	  sss1 += start_fastq_read_offset;
 	  seq_len = strlen (sss1);
+	  seq_len = maxim (0, seq_len - end_fastq_read_offset);
+	  sss1[seq_len] = '\0';
 	  if (pair_flag)
 	  {
-	    sss2 += fastq_read_offset;
+	    sss2 += start_fastq_read_offset;
 	    seq_len2 = strlen (sss2);
+	    seq_len2 = maxim (0, seq_len2 - end_fastq_read_offset);
+	    sss2[seq_len2] = '\0';
 	  }
 
 	}
