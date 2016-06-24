@@ -90,7 +90,7 @@ char geno_call(int base, int ref );
 int
 main (int argc, char *argv[])
 {
-    FILE *outfile, *bedfile, *sfile, *mapfile, *pedfile;
+    FILE *outfile, *bedfile, *sfile, *mapfile, *pedfile, *dropIdFile;
     gzFile basefile;
     int maxsnps;
     int i, j;
@@ -103,16 +103,18 @@ main (int argc, char *argv[])
     int char_to_int[256];
     char sss[4096];
     char **contig_names;
+    char **dropIds;
     int no_contigs;
     char int_to_char[256];
     char merge_ints[256][256];
     DIR *pDIR;
     struct dirent *pDirEnt;
+      int badIdCount = 0;
     
     
-    if (argc != 7)
+    if (!( argc == 7 || argc == 9))
     {
-        printf ("\n Usage %s maxsnps maxsamples bedfile outfile sdxfile ishaploid \n", argv[0]);
+        printf ("\n Usage %s maxsnps maxsamples bedfile outfile sdxfile ishaploid [drop_id_file] [number of ids to drop]\n", argv[0]);
         exit (1);
     }
     
@@ -125,9 +127,10 @@ main (int argc, char *argv[])
         printf ("\n Can not open file %s\n", argv[5]);
         exit (1);
     }
-    if ((outfile = fopen (argv[4], "w")) == (FILE *) NULL)
+    sprintf(sss, "%s.snp", argv[4]);
+    if ((outfile = fopen (sss, "w")) == (FILE *) NULL)
     {
-        printf ("\n Can not open file %s for writing\n", argv[4]);
+        printf ("\n Can not open file %s for writing\n", sss);
         exit (1);
     }
     
@@ -144,7 +147,30 @@ main (int argc, char *argv[])
         printf ("\n Can not open file %s for writing\n", sss);
         exit (1);
     }
-    
+
+    if (argc == 9) {
+      sprintf(sss, "%s", argv[7]);
+      if ((dropIdFile = fopen(sss, "r")) == (FILE *) NULL) {
+        printf ("\n Can not open file %s for reading\n", sss);
+        exit (1);
+      }
+      char temp_string[1024];
+      int maxIdCount = atoi( argv[8] );
+
+      dropIds = cmatrix( 0, maxIdCount, 0, 256);
+      while (fgets(temp_string, 1024, dropIdFile) != NULL) {
+        if ( badIdCount > maxIdCount )
+          dump_error ("\n More than expected bad Ids in file\n");
+
+        char *token;
+        token = strtok(temp_string, "\t \n");
+        token = strtok(NULL, "\t \n");
+        strcpy( dropIds[badIdCount], token);
+        badIdCount++;
+      }
+      for (int i = 0; i < badIdCount; i++ ) 
+        printf("\nBad ID: %d - %s\n", i, dropIds[i]);
+    }
     
     fgets (sss, 256, sfile);
     no_contigs = atoi (sss);
@@ -231,10 +257,6 @@ main (int argc, char *argv[])
     char_to_int['H'] = char_to_int['h'] = 13;
     char_to_int['N'] = char_to_int['n'] = 14;
 
-
-
-    
-    
     samples = (SNODE **) malloc (sizeof (SNODE *) * maxsamples);
     if (!samples)
         dump_error ("\n Not enough memory for samples array \n");
@@ -361,15 +383,28 @@ main (int argc, char *argv[])
                             i = last_sample;
                             old = TRUE;
                         }
-                    if (!old)
+
+                    // skip bad/unwanted ids
+                    int wanted = TRUE;
+                    for (int i = 0; i < badIdCount; i++)
+                      if ( strcmp( dropIds[i], token ) == 0 ) 
+                      {
+                        printf("\n Found Bad Id %s - skipping\n\n", dropIds[i]);
+                        wanted = FALSE;
+                      }
+
+                    if (wanted) 
                     {
-                        samples[last_sample] = sample_alloc ();
-                        strcpy (samples[last_sample]->name, token);
-                        samples[last_sample]->which = last_sample;
-                        sample_map[sample_count] = last_sample;
-                        last_sample++;
+                      if (!old)
+                      {
+                          samples[last_sample] = sample_alloc ();
+                          strcpy (samples[last_sample]->name, token);
+                          samples[last_sample]->which = last_sample;
+                          sample_map[sample_count] = last_sample;
+                          last_sample++;
+                      }
+                      sample_count++;
                     }
-                    sample_count++;
                 }
                 token = strtok (NULL, "\t \n");
             }
