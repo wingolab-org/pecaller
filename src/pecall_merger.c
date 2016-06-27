@@ -545,9 +545,13 @@ main (int argc, char *argv[])
     printf("sample count: %d, base count: %d\n", last_sample, last_base);
     
     char **pedigree_matrix = cmatrix (0, last_sample, 0, last_base);
+    char *print_ped_genotype = cvector( 0, last_base );
     for (i = 0; i < last_sample; i++)
       for (j = 0; j < last_base; j++)
+      {
         pedigree_matrix[i][j] = 0;
+        print_ped_genotype[j] = 1;
+      }
 
     char snptype[128];
     char count_string[128];
@@ -598,6 +602,14 @@ main (int argc, char *argv[])
                     }
                     thisa++;
                 }
+
+            // skip sites that are not polymorphic, i.e., reference and allele strings are the same
+            sprintf(sss, "%c", bases[i]->ref);
+            if ( strcmp( allele_string, sss) == 0 ) {
+              print_ped_genotype[i] = 0;
+              continue;
+            }
+
             fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s", contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref,
                      allele_string, count_string, snptype);
 
@@ -622,6 +634,10 @@ main (int argc, char *argv[])
     for ( i = 0; i < last_sample; i++ ) {
       fprintf( pedfile, "0\t%s\t0\t0\t0\t0", samples[i]->name );
       for ( j = 0; j < last_base; j++ ) {
+        if ( print_ped_genotype[j] == 0 ) {
+          continue;
+        }
+
         char geno = pedigree_matrix[i][j];
         if ( geno == 0 )
         {
