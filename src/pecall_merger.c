@@ -168,7 +168,7 @@ main (int argc, char *argv[])
         strcpy( dropIds[badIdCount], token);
         badIdCount++;
       }
-      for (int i = 0; i < badIdCount; i++ ) 
+      for (i = 0; i < badIdCount; i++ ) 
         printf("\nBad ID: %d - %s\n", i, dropIds[i]);
     }
     
@@ -386,7 +386,7 @@ main (int argc, char *argv[])
 
                     // skip bad/unwanted ids
                     int wanted = TRUE;
-                    for (int i = 0; i < badIdCount; i++)
+                    for (i = 0; i < badIdCount; i++)
                       if ( strcmp( dropIds[i], token ) == 0 ) 
                       {
                         printf("\n Found Bad Id %s - skipping\n\n", dropIds[i]);

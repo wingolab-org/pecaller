@@ -34,4 +34,3 @@ Use `index_genome` either interactively or you can redirect input from a file. F
 ## Map `Fastq` files
 
 You can either map a single fastq file, paired-ended fastq files, or collection of paired-ended fastq files. 
-
