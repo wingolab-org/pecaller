@@ -1,7 +1,7 @@
 # Makefile for PE Mapper / Caller Tools
 
 CC         = gcc 
-CC_OPTIONS = -Wall -Wextra
+CC_OPTIONS = -Wall -O3
 INCLUDES   =
 CFLAGS     = $(CC_OPTIONS) $(INCLUDES)
 LIBS       = -lm -lz -lpthread
