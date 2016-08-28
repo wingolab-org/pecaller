@@ -497,7 +497,7 @@ main (int argc, char *argv[])
     {
       if ((pileupfile[i] = gzopen (pDirEnt->d_name, "rb")) == (gzFile) NULL)
       {
-	printf ("\n Can not open file %s which should contain pedigree information\n", pDirEnt->d_name);
+	printf ("\n Can not open file %s which should contain pileup information\n", pDirEnt->d_name);
 	exit (1);
       }
       gzbuffer (pileupfile[i], 131072);
