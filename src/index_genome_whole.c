@@ -95,7 +95,7 @@ main ()
 {
   char **filename, ss[4196], sss[4196], basename[1024];
   char scratch_pad, **contig_descript;
-  int i, k, N, not_done;
+  int i, N, not_done;
   unsigned int j;
   unsigned int bit_mat[256];
   int fasta, idepth;
@@ -106,12 +106,12 @@ main ()
   int length_from_N;
   unsigned int maskit;
   unsigned int *contig_length, gpos, this_mer, s1_mer;
-  unsigned int **flat_index, newpos, expos, realpos;
+  unsigned int **flat_index, newpos;
   unsigned int *flat_index_count;
   unsigned int *flat_index_max;
 
   FILE *sfile, *mfile;
-  gzFile *seqfile, *ifile;
+  gzFile seqfile, ifile;
 
   outfile = stdout;
   read_var ("\nSend Output to Screen or Disk? [S,D]\n", ss);
@@ -154,7 +154,7 @@ main ()
     exit (1);
   }
   sprintf (ss, "%s.seq", basename);
-  if ((seqfile = gzopen (ss, "w")) == (gzFile *) NULL)
+  if ((seqfile = gzopen (ss, "w")) == (gzFile) NULL)
   {
     printf ("\nCould Not Open file %s\n", ss);
     exit (1);
@@ -178,8 +178,6 @@ main ()
 
   not_done = TRUE;
 
-  expos = 0;
-  realpos = 0;
   total_index = (unsigned int) -1;
   min_index = 0;
   maskit = (unsigned int) (total_index - 1);
@@ -327,13 +325,11 @@ main ()
   }
 
   sprintf (ss, "%s.idx", basename);
-  if ((ifile = gzopen (ss, "w")) == (gzFile *) NULL)
+  if ((ifile = gzopen (ss, "w")) == (gzFile) NULL)
   {
     printf ("\nCould Not Open file %s\n", ss);
     exit (1);
   }
-
-  k = 0;
 
   unsigned tot = 0;
   for (ii = 0; ii <= total_index; ii++)
