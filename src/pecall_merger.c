@@ -500,7 +500,8 @@ main (int argc, char *argv[])
     int ref = char_to_int[(int) bases[i]->ref];
     for (k = 0; k < NO_ALLELES; k++)
       this_allele_counts[k] = 0;
-    for (j = 0; j < last_sample; j++)
+    int this_s = minim (last_sample, bases[i]->no_calls);
+    for (j = 0; j < this_s; j++)
       // if(bases[i]->quality[samples[j]->which] >= char_thres)
       for (k = 0; k < NO_ALLELES; k++)
 	this_allele_counts[k] += allele_counts[ref][(int) bases[i]->calls[samples[j]->which]][k];
@@ -537,11 +538,14 @@ main (int argc, char *argv[])
 	  }
 	  thisa++;
 	}
-      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s", contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref,
-	       allele_string, count_string, snptype);
-      for (j = 0; j < last_sample; j++)
-	fprintf (outfile, "\t%c\t%g", int_to_char[(int) bases[i]->calls[samples[j]->which]],
+      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s",
+	       contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref, allele_string, count_string, snptype);
+      for (j = 0; j < this_s; j++)
+	fprintf (outfile, "\t%c\t%g",
+		 int_to_char[(int) bases[i]->calls[samples[j]->which]],
 		 ((float) bases[i]->quality[samples[j]->which]) / 255.0);
+      for (j = this_s; j < last_sample; j++)
+	fprintf (outfile, "\tN\t1");
     }
   }
   fprintf (outfile, "\n");
