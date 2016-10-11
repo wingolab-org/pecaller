@@ -78,6 +78,7 @@ main (int argc, char *argv[])
   unsigned int *contig_starts;
   int max_contigs, no_contigs;
   char *genome_buffer;
+  double min_prob;
   int i, j;
 
 
@@ -85,11 +86,16 @@ main (int argc, char *argv[])
   gzFile reffile, snpfile;
 
 
-  if (argc != 3)
+  if ((argc != 4) && (argc != 3))
   {
-    printf ("\nUsage: %s sdx_file snpfile\n", argv[0]);
+    printf ("\nUsage: %s sdx_file snpfile [min_prob_to_make_call] \n", argv[0]);
     exit (1);
   }
+  min_prob = 0.0;
+  double tp = (double) atof (argv[3]);
+  if ((tp >= 0.0) && (tp <= 1.0))
+    min_prob = tp;
+
   strcpy (sdxname, argv[1]);
   if ((sfile = fopen (sdxname, "r")) == (FILE *) NULL)
   {
@@ -487,12 +493,18 @@ main (int argc, char *argv[])
 	sprintf (alt_a_final, "%c", ref);
       }
       printf ("\n%s\t%d\t.\t%s\t%s\t.\t%s\tNS=%d\tGT:GQ", chrom, pos, ref_string, alt_a_final, slabel, tot_samples);
+      char *token2;
+      double op;
       for (i = 0; i < tot_samples; i++)
       {
 	token = strtok (NULL, "\n\t ");
-	printf ("\t%s", call_map[(int) token[0]]);
-	token = strtok (NULL, "\n\t ");
-	printf (":%s", token);
+	token2 = strtok (NULL, "\n\t ");
+	op = (double) atof (token2);
+	if (op >= min_prob)
+	  printf ("\t%s", call_map[(int) token[0]]);
+	else
+	  printf ("\t./.");
+	printf (":%s", token2);
       }
     }
 
