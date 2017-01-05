@@ -10,7 +10,7 @@
 #                 use `grep '>' out_ext.*.fa` to check the order of the
 #                 chromosomes;
 
-# The code itself is Copyright (C) 2016, by Thomas S. Wingo
+# The code itself is Copyright (C) 2017, by Thomas S. Wingo
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
