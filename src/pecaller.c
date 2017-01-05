@@ -1201,7 +1201,7 @@ call_single_base (void *threadid)
   unsigned long dummy_counter = 0;
 
   while (!ALL_FINISHED)
-    if (td->status == DATA_LOADED)
+    if ((td->status == DATA_LOADED) && (td->dom_int < NO_ALLELES))
     {
       // pthread_mutex_lock(&(td->mutex));
       td->status = DATA_RUNNING;
@@ -1218,10 +1218,10 @@ call_single_base (void *threadid)
       int chrom = td->chrom;
       SAMNODE **samples = td->samples;
       int HAPLOID = td->HAPLOID;
-      if (samples[0]->reads[5] > 10)
-	dump_me = TRUE;
-      else
-	dump_me = FALSE;
+      // if(samples[0]->reads[5] > 10)
+      // dump_me = TRUE;
+      // else
+//      dump_me = FALSE;
 
       for (ind = 0; ind < INDIV; ind++)
       {
@@ -1254,7 +1254,7 @@ call_single_base (void *threadid)
 	// printf("\n About to make call \n\n");
 	// printf("\n Called %c \n\n",int_to_gen(samples[ind]->initial_call));
       }
-      if (dom == 'N')
+      if (dom == 'N' || dom_int >= NO_ALLELES)
 	bad_base = TRUE;
       double average_depth = 0;
       double std_depth = 0.0;
@@ -1296,7 +1296,7 @@ call_single_base (void *threadid)
 	    het_count++;
 	  sample_count++;
 	}
-      if (sample_count < (double) 0.5 * INDIV)
+      if ((sample_count < (double) 0.5 * INDIV) && (td->chrom != CHRY))
 	bad_base = TRUE;
 
       // printf("\n About to fill prior \n\n");
@@ -1711,6 +1711,8 @@ call_single_base (void *threadid)
     }
     else
     {
+      if (td->dom_int >= NO_ALLELES)
+	td->status = DATA_EMPTY;
       dummy_counter++;
       if (dummy_counter % (long) 1000000000 == 0)
 	printf ("\n Waiting for data in thread %d \n\n", tid);
