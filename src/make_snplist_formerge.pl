@@ -1,0 +1,121 @@
+#!/usr/bin/perl
+use IO::Zlib;
+use strict vars;
+use vars
+  qw(@fields %snp_count %good_count @good_list @bad_list %chr_num @sort_snp @ssort_snp $f $i $j @sample_names $dirname %chr %pos);
+
+$dirname = ".";
+
+if ( @ARGV != 2 ) {
+  print "\n Usage: ${0} sdx_file outname \n\n ";
+  exit(1);
+}
+
+open( FILE, "$ARGV[0]" )
+  || die "\nCan't open file $ARGV[0] which should contain genome_sdx_file\n";
+my $chr_count = <FILE> +0;
+my $ii        = 0;
+for ( my $i = 0; $i < $chr_count; $i++ ) {
+  $_ = <FILE>;
+  chomp;
+  @fields = split('\t');
+  $chr_num{"$fields[1]"} = $ii;
+  # print "\n Chromosome $fields[1] has offset $cc \n";
+  $ii++;
+}
+print "\n Finished reading genome \n";
+close(FILE);
+opendir( DIR, $dirname ) || die "Cannot open directory $dirname";
+my @files = sort grep { /\.snp$/ } readdir(DIR);
+close(DIR);
+foreach my $f (@files) {
+  open( FILE, "$f" ) || die "\n Can't open $f for reading \n";
+  print "\n About to read $f \n";
+  <FILE>;
+  my $ii = 0;
+  while (<FILE>) {
+    @fields = split('\t');
+    my $name = "$fields[0]\_$fields[1]";
+    $chr{$name} = $fields[0];
+    $pos{$name} = $fields[1];
+    if ( ( $fields[5] ne "LOW" ) && ( $fields[5] ne "MESS" ) ) {
+      $good_count{$name}++;
+    }
+    if ( exists( $snp_count{$name} ) ) {
+      $snp_count{$name}++;
+    }
+    else {
+      $snp_count{$name} = 1;
+    }
+    $ii++;
+    if ( $ii % 100000 == 0 ) {
+      print "\n Read $ii lines \n";
+    }
+  }
+  close(FILE);
+}
+print "\n About to sort \n";
+foreach my $k ( keys %snp_count ) {
+  if ( $good_count{$k} > 0 ) {
+    push @good_list, $k;
+  }
+  else {
+    push @bad_list, $k;
+  }
+}
+
+@sort_snp = sort { compare_snp() } (@good_list);
+print "\n About to print good list \n";
+open( FILE, ">$ARGV[1].good.bed" )
+  || die "\n Can not open $ARGV[1].good.bed for writing \n";
+my $start = $sort_snp[0];
+my $end   = $sort_snp[0];
+shift(@sort_snp);
+foreach my $i (@sort_snp) {
+  if ( ( $chr{$i} eq $chr{$start} ) && ( $pos{$i} - $pos{$end} == 1 ) ) {
+    $end = $i;
+  }
+  else {
+    print FILE "$chr{$start}\t$pos{$start}\t$pos{$end}\n";
+    $start = $i;
+    $end   = $i;
+  }
+}
+print FILE "$chr{$start}\t$pos{$start}\t$pos{$end}\n";
+close(FILE);
+@sort_snp = sort { compare_snp() } (@bad_list);
+print "\n About to print bad list\n";
+open( FILE, ">$ARGV[1].bad.bed" )
+  || die "\n Can not open $ARGV[1].bad.bed for writing \n";
+$start = $sort_snp[0];
+$end   = $sort_snp[0];
+shift(@sort_snp);
+
+foreach my $i (@sort_snp) {
+  if ( ( $chr{$i} eq $chr{$start} ) && ( $pos{$i} - $pos{$end} == 1 ) ) {
+    $end = $i;
+  }
+  else {
+    print FILE "$chr{$start}\t$pos{$start}\t$pos{$end}\n";
+    $start = $i;
+    $end   = $i;
+  }
+}
+print FILE "$chr{$start}\t$pos{$start}\t$pos{$end}\n";
+close(FILE);
+
+sub compare_snp ($a $b) {
+  if ( $chr_num{ $chr{$a} } < $chr_num{ $chr{$b} } ) {
+    return -1;
+  }
+  if ( $chr_num{ $chr{$b} } < $chr_num{ $chr{$a} } ) {
+    return 1;
+  }
+  if ( $pos{$a} < $pos{$b} ) {
+    return -1;
+  }
+  if ( $pos{$b} < $pos{$a} ) {
+    return 1;
+  }
+  return 0;
+}
