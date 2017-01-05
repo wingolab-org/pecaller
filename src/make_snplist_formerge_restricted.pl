@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-  
+
 #  The code itself is Copyright (C) 2016, by David J. Cutler.
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public
@@ -12,7 +12,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
+
 use IO::Zlib;
 use strict vars;
 use vars
@@ -21,6 +21,7 @@ use vars
 $dirname = ".";
 
 if ( @ARGV != 2 ) {
+  print "\n!!! Do not use. Use make_snplist_formerge.pl instead !!!\n";
   print "\n Usage: ${0} sdx_file outname \n\n ";
   exit(1);
 }
@@ -75,7 +76,7 @@ foreach my $i ( keys %covered_base ) {
 }
 
 opendir( DIR, $dirname ) || die "Cannot open directory $dirname";
-my @files = sort grep { /\.snp$/ } readdir(DIR);
+@files = sort grep { /\.snp$/ } readdir(DIR);
 close(DIR);
 foreach my $f (@files) {
   open( FILE, "$f" ) || die "\n Can't open $f for reading \n";
