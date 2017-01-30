@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <tgmath.h>
 #include <float.h>
 #include <ctype.h>
 #include <zlib.h>
@@ -303,7 +304,7 @@ main (int argc, char *argv[])
   int *sample_map;
   sample_map = ivector (0, maxsamples);
   double thres = 0.95;
-  unsigned char char_thres = (unsigned char) round (thres * 255);
+  unsigned char char_thres = (unsigned char) rint (thres * 255);
   printf ("\n The char_thres = %d \n", (int) char_thres);
   while (pDirEnt != NULL)
   {
@@ -430,7 +431,7 @@ main (int argc, char *argv[])
 	    token = strtok (NULL, "\t \n");
 	    these_quals = atof (token);
 
-	    unsigned char qual_char = (unsigned char) round (these_quals * 255);
+	    unsigned char qual_char = (unsigned char) rint (these_quals * 255);
 	    // if(last_sample > 400)
 	    // printf("\n i=%d call = %c qual = %g qual char = %d which will go in position %d \n\n",i,these_calls,these_quals,(int)qual_char,sample_map[i]);
 	    if ((qual_char >= char_thres))
@@ -463,6 +464,7 @@ main (int argc, char *argv[])
 	    not_done = TRUE;
 	}
       }
+      gzclose (basefile);
     }
     pDirEnt = readdir (pDIR);
   }
@@ -538,11 +540,10 @@ main (int argc, char *argv[])
 	  }
 	  thisa++;
 	}
-      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s",
-	       contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref, allele_string, count_string, snptype);
+      fprintf (outfile, "\n%s\t%d\t%c\t%s\t%s\t%s", contig_names[bases[i]->chrom], bases[i]->pos, bases[i]->ref,
+	       allele_string, count_string, snptype);
       for (j = 0; j < this_s; j++)
-	fprintf (outfile, "\t%c\t%g",
-		 int_to_char[(int) bases[i]->calls[samples[j]->which]],
+	fprintf (outfile, "\t%c\t%g", int_to_char[(int) bases[i]->calls[samples[j]->which]],
 		 ((float) bases[i]->quality[samples[j]->which]) / 255.0);
       for (j = this_s; j < last_sample; j++)
 	fprintf (outfile, "\tN\t1");
