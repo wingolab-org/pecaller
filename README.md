@@ -9,7 +9,7 @@ Current Citation (Pre-submission):
 
 For example, to download all of mm10 to the current directory from UCSC:
 
-		rsync -avzP rsync://hgdownload.cse.ucsc.edu/goldenPath/mm10/chromosomes/ ./
+    rsync -avzP rsync://hgdownload.cse.ucsc.edu/goldenPath/mm10/chromosomes/ ./
 
 * Merge all of the fa files into one large fa file.
 
@@ -17,7 +17,7 @@ Use `merge_dir_fa.pl` to merge the files into a single fa file with chromosomes
 sorted in a natural order (e.g.,  1-19, M, X, and Y) with unmapped chromosome
 after chrY.
 
-		./merge_dir_fa.pl -d ../mm10_2015-01-25/ -c '1-19,M,X,Y' -o mm10
+    ./merge_dir_fa.pl -d ../mm10_2015-01-25/ -c '1-19,M,X,Y' -o mm10
 
 * Index the merged fa file.
 
@@ -40,22 +40,26 @@ the files and that paired-ended files either have `_1_` vs `_2_` or `_R1_` vs
 
 ## Basecalling
 
-- place all pileup files into a single directory and call using `pecaller`
-launched from that directory. Note: if you experience a segmentation fault
-just after running the command it is likely that you have not supplied the
-command correctly. An `argtable3` or `getopt` interface would be a nice
-addition.
+- place all pileup files into a single directory and use `pecaller`
+launched from that directory. 
+- The user specified bed file can restrict calling to sites within the file.
+The chromosome order must be _exactly_ the same as in the `sdx` file of the 
+indexed genome.
+- Note: if you experience a segmentation fault just after running the command 
+it is likely that you have not supplied the command correctly. It is easy to
+miss a parameter, and an `argtable3` or `getopt` interface is on our wish list.
 - `pecaller` will make a base and snp file for all sites in the user supplied
 region (or every site covered in the pileup file if one is not provided).
 
 ## Merging basecall files together
 
 - You may have multiple base and snp files from different basecall runs that
-would be nice to be merged together. To do this, place all of the called files
-(i.e., snp, base, and indel files) into the same directory (or symlink them) and
-use `make_snplist_formerge.pl` to create a "good" and "bad" list of sites, based
-on variants sites in the snpfiles. Then provide `pecall_merger` with the base
-files and sites that should be merged.
+would be nice to be merged together. 
+- To do this, place all of the called files (i.e., snp, base, and indel files) 
+into the same directory (or symlink them) and use `make_snplist_formerge.pl` 
+to create a "good" and "bad" list of sites, based on variants sites in the 
+snpfiles. Then provide `pecall_merger` with the base files and sites that 
+should be merged.
 
 ## Adding Indels to the snpfiles
 
@@ -68,7 +72,7 @@ common insertion sequence use `merge_indel_snp.pl`.
 
 - `snp_tran_counter.pl` and `snp_tran_silent_rep.pl` give Transition to
 Transversion counts for different sites and kinds of changes within the genome.
-The `snp_tran_silent_rep.pl` expects the annotation to come from
+`snp_tran_silent_rep.pl` expects the annotation to come from
 [SeqAnt](https://seqant.emory.edu/).
 
 ## Contributing / Folding in Dave's changes
