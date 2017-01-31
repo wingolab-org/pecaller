@@ -53,26 +53,27 @@ region (or every site covered in the pileup file if one is not provided).
 
 ## Merging basecall files together
 
-- You may have multiple base and snp files from different basecall runs that
-would be nice to be merged together. 
-- To do this, place all of the called files (i.e., snp, base, and indel files) 
-into the same directory (or symlink them) and use `make_snplist_formerge.pl` 
-to create a "good" and "bad" list of sites, based on variants sites in the 
-snpfiles. Then provide `pecall_merger` with the base files and sites that 
-should be merged.
+- To merge multiple base and snp files from different `pemapper` runs place 
+all of the called files (i.e., snp, base, and indel files) into the same 
+directory (or symlink them) and run `make_snplist_formerge.pl`, which will
+examine the snp files and create a "good" and "bad" list of sites. 
+- Provide `pecall_merger` with the base files and sites that should be merged.
 
-## Adding Indels to the snpfiles
+## Adding Indels and sorting variant sites in a snpfile
 
-- After `pecaller` writes the snpfile it will have each indel site listed but
-indels might not be listed in a useful way since all sites are called
-independently. To merge all contiguous deletions together and insert the most
-common insertion sequence use `merge_indel_snp.pl`.
+- `pecaller` calls each base indepently, unlike a haplotype caller. The 
+multithreaded nature of `pecaller` also means that small deletions (or SNPs) 
+may not be called contiguously. Also, insertions are stored in a separate 
+`indel` file.
+- To sort the variants and place all final indels into the snpfile use 
+`merge_indel_snp.pl`.
 
 ## Q/C
 
-- `snp_tran_counter.pl` and `snp_tran_silent_rep.pl` give Transition to
-Transversion counts for different sites and kinds of changes within the genome.
-`snp_tran_silent_rep.pl` expects the annotation to come from
+- `snp_tran_counter.pl` and `snp_tran_silent_rep.pl` give transition to
+transversion counts for variants obsered. The latter provides counts specific
+to different kinds of classes of variants (i.e., replacement sites). 
+- `snp_tran_silent_rep.pl` expects the annotation to come from
 [SeqAnt](https://seqant.emory.edu/).
 
 ## Contributing / Folding in Dave's changes
