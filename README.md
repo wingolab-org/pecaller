@@ -1,7 +1,7 @@
 # PEMapper/PECaller
 
-Current Citation (Pre-submission):
-[Johnston HR, Chopra P, Wingo T, et al. PEMapper / PECaller: A simplified approach to whole-genome sequencing. bioRxiv. 2016](http://biorxiv.org/content/early/2016/09/22/076968)
+Citation:
+[Johnston HR, Chopra P, Wingo T, et al. PEMapper / PECaller: A simplified approach to whole-genome sequencing. Proc Natl Acad Sci U S A. 2017 Feb 21. doi: 10.1073/pnas.1618065114](https://www.ncbi.nlm.nih.gov/pubmed/28223510)
 
 ## Build genome index
 
