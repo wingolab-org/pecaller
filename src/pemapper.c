@@ -1247,7 +1247,8 @@ map_everything (void *threadid)
       {
 	total_reads++;
 	total_bases += td->len2[j];
-	long test = labs ((long)td->m1[j] - (long)td->m2[j]);
+	long test = labs (td->m1[j] - td->m2[j]);
+	maps2[td->read_no[j]] = td->m2[j];
 	if (test < max_dist * 4)
 	{
 	  total_dist += (long) test;
@@ -2240,7 +2241,7 @@ find_matches (unsigned int **mers, int max_depth, int *offsets, int idepth,
       tot_found = 1;
       for (j = loop + 1; j <= max_depth; j++)
 	for (k = mer_pos[j]; (k <= mers[j][0] && mers[j][k] <= this_end); k++)
-	  if (labs (((long)mers[loop][i] - (long)mers[j][k]) - ((long)offsets[loop] - (long)offsets[j])) < max_off)
+	  if (abs ((mers[loop][i] - mers[j][k]) - (offsets[loop] - offsets[j])) < max_off)
 	  {
 	    tot_found++;
 	    // printf("\n Found a part at j = %d k = %d",j,k);
