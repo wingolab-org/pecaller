@@ -91,8 +91,8 @@ typedef struct config_node
   int homs;
 } CNODE;
 
-short dyad_denovo[MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
-short trio_denovo[MAX_GENOTYPES + 1][MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
+short dyad_denovo[NO_ALLELES][MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
+short trio_denovo[NO_ALLELES][MAX_GENOTYPES + 1][MAX_GENOTYPES + 1][MAX_GENOTYPES + 1];
 short allele_counts[NO_ALLELES][MAX_GENOTYPES][NO_ALLELES];
 
 double LOW_BASE;
@@ -167,7 +167,7 @@ void fill_alpha_coef (int **alpha, double *coef, int max_gen);
 void fill_config_like (CNODE * cn, SAMNODE ** sn, int n);
 void fill_sample_like (SAMNODE ** samples, double **alpha, int max_gen, int indiv, SAMNODE ** order, double norm,
 		       double avg);
-int add_denovo (int kid, int dad, int mom, int sex, int chrom);
+int add_denovo (int kid, int dad, int mom, int sex, int chrom, int ref);
 double gammln (double xx);
 double exactfactln (int n);
 double factln (int n);
@@ -309,55 +309,59 @@ main (int argc, char *argv[])
   HAPLOID = FALSE;
   max_gen = min_depth_needed = 0;
 
-  for (i = 0; i <= MAX_GENOTYPES; i++)
-    for (j = 0; j <= MAX_GENOTYPES; j++)
-    {
-      dyad_denovo[i][j] = 0;
-      for (k = 0; k <= MAX_GENOTYPES; k++)
-	trio_denovo[i][j][k] = 0;
-    }
+  int ii;
+  for (ii = 0; ii < 4; ii++)
+    for (i = 0; i <= MAX_GENOTYPES; i++)
+      for (j = 0; j <= MAX_GENOTYPES; j++)
+      {
+	dyad_denovo[ii][i][j] = 0;
+	for (k = 0; k <= MAX_GENOTYPES; k++)
+	  trio_denovo[ii][i][j][k] = 0;
+      }
   strcpy (ss, argv[7]);
   if ((strchr (ss, 'Y')) || (strchr (ss, 'y')))
   {
     HAPLOID = TRUE;
     max_gen = 6;
     min_depth_needed = 1;
-    for (i = 0; i < max_gen; i++)
-      for (j = 0; j < max_gen; j++)
-	if (i != j)
-	  dyad_denovo[i][j] = 1;
+    for (ii = 0; ii < 4; ii++)
+      for (i = 0; i < max_gen; i++)
+	for (j = 0; j < max_gen; j++)
+	  if (i != j)
+	    dyad_denovo[ii][i][j] = 1;
   }
   else
   {
     max_gen = MAX_GENOTYPES;
     min_depth_needed = 2;
     int da, db, ma, mb, ka, kb;
-    for (i = 0; i < max_gen; i++)
-    {
-      get_het_alleles (i, &da, &db, 0);
-      for (j = 0; j < max_gen; j++)
+    for (ii = 0; ii < 4; ii++)
+      for (i = 0; i < max_gen; i++)
       {
-	get_het_alleles (j, &ka, &kb, 0);
-	if ((ka != da) && (ka != db) && (kb != da) && (kb != db))
-	  dyad_denovo[i][j] = 1;
-	for (k = 0; k < max_gen; k++)
+	get_het_alleles (i, &da, &db, ii);
+	for (j = 0; j < max_gen; j++)
 	{
-	  get_het_alleles (k, &ma, &mb, 0);
-	  if (((ka == ma) && (kb == da)) || ((ka == ma) && (kb == db)) || ((ka == mb) && (kb == da))
-	      || ((ka == mb) && (kb == db)) || ((kb == ma) && (ka == da)) || ((kb == ma) && (ka == db)) || ((kb == mb)
-													    && (ka ==
-														da))
-	      || ((kb == mb) && (ka == db)))
-	    trio_denovo[i][k][j] = 0;
-	  else
-	    if (((ka != ma) && (kb != db)) && ((kb != ma) && (ka != db)) && ((ka != mb) && (kb != da))
-		&& ((kb != mb) && (ka != da)))
-	    trio_denovo[i][k][j] = 2;
-	  else
-	    trio_denovo[i][k][j] = 1;
+	  get_het_alleles (j, &ka, &kb, ii);
+	  if ((ka != da) && (ka != db) && (kb != da) && (kb != db))
+	    dyad_denovo[ii][i][j] = 1;
+	  for (k = 0; k < max_gen; k++)
+	  {
+	    get_het_alleles (k, &ma, &mb, ii);
+	    if (((ka == ma) && (kb == da)) || ((ka == ma) && (kb == db)) || ((ka == mb) && (kb == da))
+		|| ((ka == mb) && (kb == db)) || ((kb == ma) && (ka == da)) || ((kb == ma) && (ka == db)) || ((kb == mb)
+													      && (ka ==
+														  da))
+		|| ((kb == mb) && (ka == db)))
+	      trio_denovo[ii][i][k][j] = 0;
+	    else
+	      if (((ka != ma) && (kb != db)) && ((kb != ma) && (ka != db)) && ((ka != mb) && (kb != da))
+		  && ((kb != mb) && (ka != da)))
+	      trio_denovo[ii][i][k][j] = 2;
+	    else
+	      trio_denovo[ii][i][k][j] = 1;
+	  }
 	}
       }
-    }
   }
   strcpy (ss, argv[9]);
   if ((strchr (ss, 'Y')) || (strchr (ss, 'y')))
@@ -1658,7 +1662,7 @@ call_single_base (void *threadid)
 	      if (samples[i]->mom)
 		if (samples[i]->mom->final_p >= THRESHOLD)
 		  mom_called = samples[i]->mom->final_call;
-	      d_count += add_denovo (kid_called, dad_called, mom_called, samples[i]->sex, chrom);
+	      d_count += add_denovo (kid_called, dad_called, mom_called, samples[i]->sex, chrom, td->dom_int);
 	    }
 	  if (d_count > 0)
 	    sprintf (sss, "DENOVO_%s", snp_type[issnp]);
@@ -2390,44 +2394,44 @@ sort_compare_sample_pointer (const void *a, const void *b)
 
 /*---------------------------------------------------------------------*/
 int
-add_denovo (int kid, int dad, int mom, int sex, int chrom)
+add_denovo (int kid, int dad, int mom, int sex, int chrom, int ref)
 {
   if (dad < MAX_GENOTYPES)
   {
     if (mom < MAX_GENOTYPES)	// BOTH
     {
       if (chrom == AUTO)
-	return trio_denovo[dad][mom][kid];
+	return trio_denovo[ref][dad][mom][kid];
 
       if (chrom == CHRX)
       {
 	if (sex == 1)
-	  return dyad_denovo[mom][kid];
+	  return dyad_denovo[ref][mom][kid];
 	else
-	  return trio_denovo[dad][mom][kid];
+	  return trio_denovo[ref][dad][mom][kid];
       }
 
       if (chrom == CHRY)
       {
 	if (sex == 1)
-	  return dyad_denovo[dad][kid];
+	  return dyad_denovo[ref][dad][kid];
 	else
 	  return 0;
       }
 
       if (chrom == CHRMT)
-	return dyad_denovo[mom][kid];
+	return dyad_denovo[ref][mom][kid];
 
       return 0;
     }
     else			// DAD ONLY
     {
       if (chrom == AUTO)
-	return dyad_denovo[dad][kid];
+	return dyad_denovo[ref][dad][kid];
       if ((chrom == CHRX) && (sex == 2))
-	return dyad_denovo[dad][kid];
+	return dyad_denovo[ref][dad][kid];
       if ((chrom == CHRY) && (sex == 1))
-	return dyad_denovo[dad][kid];
+	return dyad_denovo[ref][dad][kid];
 
       return 0;
     }
@@ -2435,7 +2439,7 @@ add_denovo (int kid, int dad, int mom, int sex, int chrom)
 
   if (mom < MAX_GENOTYPES)	// MOM ONLY
     if (chrom != CHRY)
-      return dyad_denovo[mom][kid];
+      return dyad_denovo[ref][mom][kid];
 
   return 0;
 }
@@ -2575,11 +2579,12 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	  if (sn->mom)		// Both
 	    old->no_denovo -=
 	      add_denovo (j, (int) old->sample_calls[sn->dad->which], (int) old->sample_calls[sn->mom->which], sn->sex,
-			  chrom);
+			  chrom, ref);
 	  else			// Dad Only
-	    old->no_denovo -= add_denovo (j, (int) old->sample_calls[sn->dad->which], MAX_GENOTYPES, sn->sex, chrom);
+	    old->no_denovo -=
+	      add_denovo (j, (int) old->sample_calls[sn->dad->which], MAX_GENOTYPES, sn->sex, chrom, ref);
 	else if (sn->mom)	// Mom Only
-	  old->no_denovo -= add_denovo (j, MAX_GENOTYPES, (int) old->sample_calls[sn->mom->which], sn->sex, chrom);
+	  old->no_denovo -= add_denovo (j, MAX_GENOTYPES, (int) old->sample_calls[sn->mom->which], sn->sex, chrom, ref);
 	if (sn->no_kids > 0)
 	{
 	  int kg, dg, mg;
@@ -2592,7 +2597,7 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	      dg = (int) old->sample_calls[sn->kids[k]->dad->which];
 	    if (sn->kids[k]->mom)
 	      mg = (int) old->sample_calls[sn->kids[k]->mom->which];
-	    old->no_denovo -= add_denovo (kg, dg, mg, sn->kids[k]->sex, chrom);
+	    old->no_denovo -= add_denovo (kg, dg, mg, sn->kids[k]->sex, chrom, ref);
 	  }
 	  // printf("\n New number of denovos is %d",old->no_denovo);
 	}
@@ -2614,9 +2619,9 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	// }
 	double templ = old->like + sn->like[j];
 	// insertion / deletion weirdness.
-	if ((j == 12) && (sn->reads[4] < 3))
+	if (((j == 4) || (j == 12)) && (sn->reads[4] < 3))
 	  templ -= 1e10;
-	if ((j == 13) && (sn->reads[5] < 3))
+	if (((j == 13) || (j == 5)) && (sn->reads[5] < 3))
 	  templ -= 1e10;
 	if (dump_me)
 	  printf ("\n Just calculated genotype %d with a likelihood of %g jj = %d max = %d\n", j, templ, jj, max);
@@ -2655,12 +2660,13 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 	    if (sn->mom)	// Both
 	      temp->no_denovo +=
 		add_denovo (j, (int) temp->sample_calls[sn->dad->which], (int) temp->sample_calls[sn->mom->which],
-			    sn->sex, chrom);
+			    sn->sex, chrom, ref);
 	    else		// Dad Only
 	      temp->no_denovo +=
-		add_denovo (j, (int) temp->sample_calls[sn->dad->which], MAX_GENOTYPES, sn->sex, chrom);
+		add_denovo (j, (int) temp->sample_calls[sn->dad->which], MAX_GENOTYPES, sn->sex, chrom, ref);
 	  else if (sn->mom)	// Mom Only
-	    temp->no_denovo += add_denovo (j, MAX_GENOTYPES, (int) temp->sample_calls[sn->mom->which], sn->sex, chrom);
+	    temp->no_denovo +=
+	      add_denovo (j, MAX_GENOTYPES, (int) temp->sample_calls[sn->mom->which], sn->sex, chrom, ref);
 	  if (sn->no_kids > 0)
 	  {
 	    int kg, dg, mg;
@@ -2672,7 +2678,7 @@ fill_config_probs (CNODE ** cn, int n, SAMNODE ** samples, int max, int indiv, i
 		dg = (int) temp->sample_calls[sn->kids[k]->dad->which];
 	      if (sn->kids[k]->mom)
 		mg = (int) temp->sample_calls[sn->kids[k]->mom->which];
-	      temp->no_denovo += add_denovo (kg, dg, mg, sn->kids[k]->sex, chrom);
+	      temp->no_denovo += add_denovo (kg, dg, mg, sn->kids[k]->sex, chrom, ref);
 	    }
 	  }
 	  // printf("\n\tAfterwards the number of denovo is %d hets = %d  homs = %d\n\n",temp->no_denovo,temp->hets,temp->homs);
