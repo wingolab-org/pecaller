@@ -1,30 +1,91 @@
-# Makefile for PE Mapper / Caller Tools
+# Makefile for pecaller2 project
 
-CC         = gcc 
-CC_OPTIONS = -Wall -O3
-INCLUDES   =
-CFLAGS     = $(CC_OPTIONS) $(INCLUDES)
-LIBS       = -lm -lz -lpthread
+# Configuration
+CC := gcc
+CFLAGS := -std=c99 -g -O3 -Wall -Wextra -pedantic
+CFLAGS_PROD := -std=c99 -g -O3 -Wall
+LIBS := -lm -lz -lpthread
+PREFIX ?= /usr/local
 
-SRC=$(wildcard src/*.c)
-EXE=$(patsubst %.c,%,$(SRC))
+# Directories
+SRC_DIR := c
+BUILD_DIR := build
+PERL_DIR := perl
+BIN_DIR := $(PREFIX)/bin
 
-all: build $(EXE) slink_pl
+# Find all C source files in c/ directory (not subdirectories)
+C_SOURCES := $(wildcard $(SRC_DIR)/*.c)
+# Extract program names from source files
+PROGRAMS := $(patsubst $(SRC_DIR)/%.c,%,$(C_SOURCES))
+# Build targets in build directory
+TARGETS := $(patsubst %,$(BUILD_DIR)/%,$(PROGRAMS))
 
-$(EXE):
-	$(CC) $(CFLAGS) $(LIBS) -o $@ $@.c
-	mv $@ bin/
+# Find all Perl scripts
+PERL_SCRIPTS := $(wildcard $(PERL_DIR)/*.pl)
 
+# Default target
+.PHONY: all
+all: $(TARGETS)
+
+# Development build with extra warnings
+.PHONY: dev
+dev: CFLAGS := -std=c99 -g -O2 -Wall -Wextra -Wpedantic -Wshadow -Wcast-align -Wcast-qual -Wformat=2
+dev: all
+
+# Create build directory
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+# Build individual programs
+$(BUILD_DIR)/%: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	@echo "Building $*..."
+	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+
+# Clean build artifacts
+.PHONY: clean
 clean:
-	rm -rf bin
-  
-build:
-	@mkdir -p bin 
+	@echo "Cleaning build artifacts..."
+	@rm -rf $(BUILD_DIR)
+	@find . -name "*.gc*" -exec rm -f {} +
+	@rm -rf `find . -name "*.dSYM" -print`
 
-slink_pl:
-	cp ./src/*.pl bin/
-	chmod 755 bin/*
+# Install binaries and Perl scripts
+.PHONY: install
+install: all
+	@echo "Installing to $(PREFIX)..."
+	@install -d $(BIN_DIR)
+	@install -m 755 $(TARGETS) $(BIN_DIR)/
+	@install -m 755 $(PERL_SCRIPTS) $(BIN_DIR)/
 
-## end of Makefile
-# DO NOT DELETE THIS LINE -- make depend depends on it.
+# Uninstall
+.PHONY: uninstall
+uninstall:
+	@echo "Uninstalling from $(PREFIX)..."
+	@rm -f $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS))
+	@rm -f $(patsubst $(PERL_DIR)/%,$(BIN_DIR)/%,$(PERL_SCRIPTS))
 
+# Show help
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  all        - Build all programs (default)"
+	@echo "  dev        - Development build with extra warnings"
+	@echo "  clean      - Remove build artifacts"
+	@echo "  install    - Install binaries and Perl scripts to $(PREFIX)/bin"
+	@echo "  uninstall  - Remove installed files"
+	@echo "  help       - Show this help message"
+	@echo ""
+	@echo "Variables:"
+	@echo "  PREFIX     - Installation prefix (default: /usr/local)"
+	@echo "  CC         - C compiler (default: gcc)"
+	@echo ""
+	@echo "Programs to be built:"
+	@printf "  %s\n" $(PROGRAMS)
+
+# Debug: show variables
+.PHONY: debug
+debug:
+	@echo "C_SOURCES: $(C_SOURCES)"
+	@echo "PROGRAMS: $(PROGRAMS)"
+	@echo "TARGETS: $(TARGETS)"
+	@echo "PERL_SCRIPTS: $(PERL_SCRIPTS)"
