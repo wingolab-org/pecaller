@@ -56,3 +56,6 @@ tramp
 
 # perl
 .tidyall.d
+
+# vscode
+.vscode/

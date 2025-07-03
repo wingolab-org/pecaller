@@ -1,0 +1,104 @@
+name: Build PECaller2
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-centos-stream:
+    name: Build on CentOS Stream 9
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/centos/centos:stream9
+
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf update -y
+          dnf groupinstall -y "Development Tools"
+          dnf install -y zlib-devel git
+
+      - uses: actions/checkout@v4
+
+      - name: Build all programs
+        run: make
+
+      - name: Build with development flags
+        run: make dev
+
+      - name: Test clean
+        run: make clean
+
+      - name: Test installation
+        run: make install PREFIX=/tmp/test-install
+
+      - name: Verify binaries
+        run: |
+          ls -la /tmp/test-install/bin/
+          file /tmp/test-install/bin/pecaller2
+          file /tmp/test-install/bin/pemapper2
+
+  build-ubuntu:
+    name: Build on Ubuntu (Compatibility Test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libz-dev
+
+      - name: Build all programs
+        run: make
+
+      - name: Build with development flags
+        run: make dev
+
+      - name: Test clean
+        run: make clean
+
+      - name: Test installation
+        run: make install PREFIX=/tmp/test-install
+
+      - name: Verify binaries
+        run: |
+          ls -la /tmp/test-install/bin/
+          file /tmp/test-install/bin/pecaller2
+          file /tmp/test-install/bin/pemapper2
+
+  build-rocky:
+    name: Build on Rocky Linux 9 (RHEL Alternative)
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:9
+
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf update -y
+          dnf groupinstall -y "Development Tools"
+          dnf install -y zlib-devel git
+
+      - uses: actions/checkout@v4
+
+      - name: Build all programs
+        run: make
+
+      - name: Build with development flags
+        run: make dev
+
+      - name: Test clean
+        run: make clean
+
+      - name: Test installation
+        run: make install PREFIX=/tmp/test-install
+
+      - name: Verify binaries
+        run: |
+          ls -la /tmp/test-install/bin/
+          file /tmp/test-install/bin/pecaller2
+          file /tmp/test-install/bin/pemapper2

@@ -45,7 +45,7 @@ while (<FILE>) {
   chomp;
   #my $line = $_;
   @fields = split('\t');
-  my $temp = "$fields[0]\_$fields[1]";
+  my $temp    = "$fields[0]\_$fields[1]";
   my @sfields = split( '\;', $fields[$site_code] );
   my %sc_hash;
   foreach my $i (@sfields) {

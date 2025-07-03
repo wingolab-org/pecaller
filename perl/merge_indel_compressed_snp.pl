@@ -15,6 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 use IO::Zlib;
+use Compress::Zlib;
+use PerlIO::gzip;
 use strict vars;
 use vars
   qw(@fields %chr_num @sort_snp @ssort_snp $f $i $j %ins_a_count %chr_offset %ins_consensus %ins_needed @sample_names $dirname @lines @chr @pos @type);
@@ -43,9 +45,9 @@ for ( my $i = 0; $i < $chr_count; $i++ ) {
 }
 close(FILE);
 print "\n Finished Reading Genome File \n";
-open( FILE, "$ARGV[1]" )
-  || die "\nCan't open file $ARGV[1] which should contain sequencing data\n";
-$_ = <FILE>;
+
+open my $gzfh, "<:gzip", "$ARGV[1]" or die "\nCan't open file $ARGV[1] which should contain sequencing data\n";
+$_ = <$gzfh>;
 chomp;
 my $header = $_;
 @fields = split("\t");
@@ -57,7 +59,7 @@ my $line_count = 0;
 my $TYPE_SNP   = 0;
 my $TYPE_DEL   = 1;
 my $TYPE_INS   = 2;
-while (<FILE>) {
+while (<$gzfh>) {
   chomp;
   $lines[$line_count] = $_;
   @fields             = split('\t');
@@ -94,7 +96,8 @@ while (<FILE>) {
     #close(FILE);
   }
 }
-close(FILE);
+close($gzfh);
+
 for ( my $i = 6; $i < @sample_names; $i += 2 ) {
   my $all_lines;
   my $fh = new IO::Zlib;
